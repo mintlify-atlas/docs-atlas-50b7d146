@@ -1,0 +1,487 @@
+---
+title: Bank Conciliation Process
+description: Reconcile custody account balances with bank statements
+---
+
+# Bank Conciliation Process
+
+Bank conciliation (reconciliation) in TMT ensures that custody account balances in the system match actual bank statement balances. This critical financial control process identifies discrepancies and maintains financial accuracy.
+
+## Overview
+
+The conciliation module provides:
+
+- Summary dashboard with key balance metrics
+- Reconciled transactions view
+- Unreconciled items from bank statements
+- Unreconciled items from company records
+- Special adjustments management
+
+Source: `src/views/conciliations/Conciliations.js`
+
+## Conciliation Interface
+
+The conciliation view uses a tabbed interface with five sections:
+
+```javascript
+// From Conciliations.js:72-106
+<Tabs value={value} onChange={handleChange}>
+  <Tab icon={<IconClipboard />} label="Resumen" />
+  <Tab icon={<IconCheck />} label="Conciliados" />
+  <Tab icon={<IconCircleOff />} label="No Conciliados (Banco)" />
+  <Tab icon={<IconBookOff />} label="No Conciliados (Compañía)" />
+  <Tab icon={<IconAdjustmentsAlt />} label="Ajustes Especiales" />
+</Tabs>
+```
+
+## Summary Tab (Resumen)
+
+The summary tab provides an overview of the reconciliation status for a selected custody account and date range.
+
+### Selecting Parameters
+
+<Steps>
+  <Step title="Select Custody Account">
+    Choose the custody account to reconcile. Only Venezuelan digital VEF accounts are shown:
+    
+    ```javascript
+    // From SummaryConciliations.js:28-52
+    const fetchCustodyAccounts = async () => {
+      const querySnapshot = await Firestore.collection('custody_accounts')
+        .where("country", "==", "ve")
+        .where("currency", "==", "VEF")
+        .where("type", "==", "digital")
+        .get();
+      
+      const custodyAccountsArray = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        date: {
+          created: convertTimestamp(doc.data().date?.created),
+          updated: convertTimestamp(doc.data().date?.updated)
+        }
+      }));
+      
+      setCustodyAccounts(custodyAccountsArray);
+    };
+    ```
+  </Step>
+
+  <Step title="Set Date Range">
+    Configure the reconciliation period:
+    
+    **From Date**: Start of reconciliation period (default: 31 days ago)
+    
+    **To Date**: End of reconciliation period (default: today)
+    
+    ```javascript
+    // From SummaryConciliations.js:15-16
+    const [to, setTo] = React.useState(new Date());
+    const [from, setFrom] = React.useState(
+      new Date().setDate(to.getDate() - 31)
+    );
+    ```
+  </Step>
+
+  <Step title="Load Summary Data">
+    The system calls the conciliation API with selected parameters:
+    
+    ```javascript
+    // From SummaryConciliations.js:54-80
+    const getData = async ({ id, dateFrom, dateTo }) => {
+      const cuenta = id ? 
+        id.metadata.account_number : 
+        selectedAccount.metadata.account_number;
+      
+      const params = {
+        no_cta: cuenta,
+        from: moment(dateFrom ?? from).format("YYYY-MM-DD"),
+        to: moment(dateTo ?? to).format("YYYY-MM-DD")
+      };
+      
+      const response = await conciliation_summary(params);
+      
+      if (response.data) {
+        const resumen = response.data.resumen;
+        setBankInitialBalance(resumen.saldodia_banco);
+        setTransitTransfers(resumen.transfe_transito);
+        setTransitDeposits(resumen.saldo_pendiente_banco);
+        setCompanyInitialBalance(resumen.saldodia_cia);
+        setPendingRecords(resumen.saldo_pendiente_cia);
+        setAdjustments(resumen.total_ajustes);
+        setBankReconciledBalance(resumen.saldo_conciliado_banco);
+        setCompanyReconciledBalance(resumen.saldo_conciliado_cia);
+      }
+    };
+    ```
+  </Step>
+</Steps>
+
+### Summary Metrics
+
+The summary displays two parallel balance calculations:
+
+#### Bank Balance Card
+
+```javascript
+// From SummaryConciliations.js:148-220
+<Card>
+  <CardHeader title="Saldo bancario" />
+  <CardContent>
+    {/* Bank Initial Balance */}
+    <Box>
+      <Typography>Saldo bancario inicial</Typography>
+      <TextField value={bankInitialBalance} disabled />
+    </Box>
+    
+    {/* Transfers in Transit */}
+    <Box>
+      <Typography>Transferencias en Tránsito</Typography>
+      <TextField value={transitTransfers} disabled />
+    </Box>
+    
+    {/* Pending Deposits */}
+    <Box>
+      <Typography>Depósitos en Tránsito</Typography>
+      <TextField value={transitDeposits} disabled />
+    </Box>
+    
+    {/* Reconciled Bank Balance */}
+    <Box>
+      <Typography>Saldo Conciliado del Banco</Typography>
+      <TextField value={bankReconciledBalance} disabled />
+    </Box>
+  </CardContent>
+</Card>
+```
+
+Metrics:
+- **Saldo bancario inicial**: Opening bank balance
+- **Transferencias en Tránsito**: Transfers not yet cleared
+- **Depósitos en Tránsito**: Deposits pending confirmation
+- **Saldo Conciliado del Banco**: Reconciled bank balance
+
+#### Company Balance Card
+
+Parallel calculation from company records:
+
+```javascript
+<Card>
+  <CardHeader title="Saldo de la Compañía" />
+  <CardContent>
+    {/* Company Initial Balance */}
+    <Box>
+      <Typography>Saldo inicial de la Compañía</Typography>
+      <TextField value={companyInitialBalance} disabled />
+    </Box>
+    
+    {/* Pending Records */}
+    <Box>
+      <Typography>Asientos Pendientes</Typography>
+      <TextField value={pendingRecords} disabled />
+    </Box>
+    
+    {/* Adjustments */}
+    <Box>
+      <Typography>Ajustes</Typography>
+      <TextField value={adjustments} disabled />
+    </Box>
+    
+    {/* Reconciled Company Balance */}
+    <Box>
+      <Typography>Saldo Conciliado de la Compañía</Typography>
+      <TextField value={companyReconciledBalance} disabled />
+    </Box>
+  </CardContent>
+</Card>
+```
+
+Metrics:
+- **Saldo inicial de la Compañía**: Opening company balance
+- **Asientos Pendientes**: Pending company records
+- **Ajustes**: Applied adjustments
+- **Saldo Conciliado de la Compañía**: Reconciled company balance
+
+<Warning>
+  The reconciled bank balance and reconciled company balance should match. Any difference indicates unreconciled items or errors.
+</Warning>
+
+## Reconciled Items Tab (Conciliados)
+
+Displays transactions successfully matched between bank statements and company records.
+
+Implementation: `src/components/apps/conciliations/ConciliatedTable.js`
+
+### Reconciled Data Structure
+
+Reconciled items include:
+- Transaction date
+- Description/reference
+- Amount
+- Bank reference number
+- Company record ID
+- Reconciliation status
+
+## Unreconciled Items - Bank Tab
+
+Shows transactions appearing in bank statements but not in company records.
+
+Implementation: `src/components/apps/conciliations/NotConciliatedBanks.js`
+
+### Common Causes
+
+1. **Missing Company Records**: Transaction occurred but not entered in system
+2. **Timing Differences**: Transaction cleared bank on different date
+3. **External Deposits**: Funds deposited outside normal transaction flow
+4. **Bank Fees**: Charges not yet recorded
+5. **Interest**: Bank interest not entered
+
+<Steps>
+  <Step title="Identify Discrepancy">
+    Review each unreconciled bank item:
+    - Check bank reference number
+    - Verify transaction date
+    - Confirm amount
+  </Step>
+
+  <Step title="Research Transaction">
+    Determine the source:
+    - Search for matching company transactions
+    - Review bank statement details
+    - Contact bank if needed
+  </Step>
+
+  <Step title="Take Corrective Action">
+    Options:
+    - Create missing company record
+    - Adjust transaction date
+    - Record as special adjustment
+    - Mark as reconciled if matching record found
+  </Step>
+</Steps>
+
+## Unreconciled Items - Company Tab
+
+Shows transactions in company records but not appearing in bank statements.
+
+Implementation: `src/components/apps/conciliations/NotConciliatedCompany.js`
+
+### Common Causes
+
+1. **Pending Transactions**: Not yet cleared by bank
+2. **Failed Transactions**: Transaction rejected but not updated
+3. **Duplicate Entries**: Mistakenly entered twice
+4. **Wrong Account**: Transaction recorded to wrong custody account
+5. **Timing Differences**: Will appear in next statement
+
+<Steps>
+  <Step title="Review Company Record">
+    Examine each unreconciled item:
+    - Transaction ID
+    - Entry date
+    - Amount and currency
+    - Payment method
+  </Step>
+
+  <Step title="Verify Status">
+    Check transaction status:
+    - Is it still pending?
+    - Has it been cancelled?
+    - Was it processed to a different account?
+  </Step>
+
+  <Step title="Resolve Discrepancy">
+    Actions:
+    - Wait for bank clearing (if recent)
+    - Cancel duplicate entries
+    - Reclassify to correct account
+    - Create special adjustment
+  </Step>
+</Steps>
+
+## Special Adjustments Tab
+
+Manage manual adjustments for reconciliation exceptions.
+
+Implementation: `src/components/apps/conciliations/SpecialAdjustments.js`
+
+### When to Use Special Adjustments
+
+- Bank fees and charges
+- Interest income
+- Currency conversion differences
+- Correction of errors
+- Returned payments
+- Chargebacks
+
+### Creating Special Adjustments
+
+<Steps>
+  <Step title="Document Reason">
+    Record why the adjustment is needed:
+    - Source of discrepancy
+    - Amount involved
+    - Supporting documentation
+  </Step>
+
+  <Step title="Enter Adjustment">
+    Create the adjustment entry:
+    - Date
+    - Amount (positive or negative)
+    - Description
+    - Reference number
+    - Category
+  </Step>
+
+  <Step title="Approve Adjustment">
+    Special adjustments should be:
+    - Reviewed by accounting
+    - Approved by manager
+    - Documented with evidence
+  </Step>
+</Steps>
+
+<Warning>
+  Special adjustments directly affect reconciled balances. Ensure they are accurate, documented, and approved before applying.
+</Warning>
+
+## Reconciliation Best Practices
+
+### Daily Operations
+
+1. **Monitor New Transactions**: Review daily transaction flow
+2. **Check Pending Items**: Track items awaiting bank clearance
+3. **Flag Discrepancies Early**: Identify issues immediately
+
+### Weekly Tasks
+
+1. **Review Unreconciled Items**: Investigate unmatched transactions
+2. **Update Pending Status**: Clear items that have now cleared
+3. **Prepare Adjustment Requests**: Document needed adjustments
+
+### Monthly Process
+
+<Steps>
+  <Step title="Download Bank Statement">
+    Obtain official bank statement for the month
+  </Step>
+
+  <Step title="Run Reconciliation Report">
+    Generate summary for the statement period
+  </Step>
+
+  <Step title="Compare Balances">
+    Verify reconciled balances match bank statement
+  </Step>
+
+  <Step title="Investigate Differences">
+    Research any unreconciled items
+  </Step>
+
+  <Step title="Apply Adjustments">
+    Create approved special adjustments
+  </Step>
+
+  <Step title="Final Reconciliation">
+    Confirm all items are reconciled
+  </Step>
+
+  <Step title="Document Results">
+    Archive reconciliation report and bank statement
+  </Step>
+</Steps>
+
+## Reconciliation Formula
+
+### Bank Reconciled Balance
+
+```
+Bank Reconciled Balance = 
+  Bank Initial Balance
+  - Transfers in Transit
+  - Deposits in Transit
+```
+
+### Company Reconciled Balance
+
+```
+Company Reconciled Balance = 
+  Company Initial Balance
+  - Pending Records
+  + Adjustments
+```
+
+### Balance Verification
+
+```
+Bank Reconciled Balance === Company Reconciled Balance
+```
+
+If not equal:
+1. Review unreconciled items (bank)
+2. Review unreconciled items (company)
+3. Verify special adjustments
+4. Check for calculation errors
+
+## Multi-Currency Considerations
+
+The current conciliation module focuses on Venezuelan VEF accounts:
+
+```javascript
+// From SummaryConciliations.js:30
+const querySnapshot = await Firestore.collection('custody_accounts')
+  .where("country", "==", "ve")
+  .where("currency", "==", "VEF")
+  .where("type", "==", "digital")
+  .get();
+```
+
+For other currencies:
+- Use manual reconciliation procedures
+- Export transaction data
+- Compare with bank statements offline
+
+## Troubleshooting Common Issues
+
+### Balance Mismatch
+
+**Problem**: Reconciled balances don't match
+
+**Solutions**:
+1. Verify date range includes all transactions
+2. Check for pending items
+3. Review special adjustments
+4. Confirm opening balances are correct
+
+### Missing Transactions
+
+**Problem**: Known transaction not appearing
+
+**Solutions**:
+1. Check transaction date is within range
+2. Verify correct custody account selected
+3. Confirm transaction status
+4. Search in unreconciled tabs
+
+### Duplicate Entries
+
+**Problem**: Same transaction appears twice
+
+**Solutions**:
+1. Verify transaction IDs are different
+2. Check if one is a reversal
+3. Remove duplicate company record
+4. Document correction
+
+## Security and Audit
+
+- **Access Control**: Limit reconciliation access to accounting team
+- **Audit Trail**: All adjustments are logged with user and timestamp
+- **Review Process**: Implement dual-control for adjustments
+- **Documentation**: Maintain supporting documents for all adjustments
+
+## Related Sections
+
+- [Custody Accounts](/guides/financial/custody-accounts) - Manage accounts being reconciled
+- [Transactions](/guides/financial/transactions) - View transaction details
+- [Payment Methods](/guides/financial/payment-methods) - Understand payment flows

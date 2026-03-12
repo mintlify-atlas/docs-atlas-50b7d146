@@ -1,0 +1,374 @@
+---
+title: User Management
+description: Multi-role user management system for Staff, Clients, Collaborators, and Customers
+icon: 'users'
+---
+
+The TMT platform implements a comprehensive multi-role user management system with four distinct user types, each with specific capabilities and access levels.
+
+## User Types
+
+<CardGroup cols={2}>
+  <Card title="Staff" icon="user-tie">
+    Internal team members with varying permission levels (Administrador, Coordinador, Contador, Soporte, Creador de Sala de Eventos)
+  </Card>
+  
+  <Card title="Clients" icon="building">
+    Event organizers and promoters who create and manage events
+  </Card>
+  
+  <Card title="Collaborators" icon="handshake">
+    Partners working with Clients on specific events
+  </Card>
+  
+  <Card title="Customers" icon="shopping-cart">
+    End users who purchase tickets for events
+  </Card>
+</CardGroup>
+
+## Staff Management
+
+Staff are internal users who operate the platform. The system supports multiple staff hierarchy levels with different permissions.
+
+### Staff Hierarchy Levels
+
+<Accordion title="Administrador (Administrator)">
+  Full system access with the ability to:
+  - Manage all users (Staff, Clients, Collaborators)
+  - Create and configure events
+  - Access all financial data
+  - Modify system settings
+  - Change event and ticket statuses
+  
+  See `src/guards/contexts/DefineAbilities.js:288-289` for permission implementation.
+</Accordion>
+
+<Accordion title="Coordinador (Coordinator)">
+  Event and client management with permissions to:
+  - Create and edit Clients and Collaborators
+  - Create and edit events
+  - Manage event venues
+  - Access contracts and addendums
+  - View tickets and credentials
+  - Cannot: create Staff, change event/ticket status, access payouts
+  
+  See `src/guards/contexts/DefineAbilities.js:11-92` for full permission list.
+</Accordion>
+
+<Accordion title="Contador (Accountant)">
+  Financial and reporting access:
+  - View clients and contracts
+  - Access events and transaction data
+  - View financial reports
+  - Cannot: create users, events, or modify configurations
+  
+  See `src/guards/contexts/DefineAbilities.js:93-161` for full permission list.
+</Accordion>
+
+<Accordion title="Soporte (Support)">
+  Read-only support access:
+  - View events and details
+  - Access ticket information
+  - View client and collaborator details
+  - Cannot: create or edit most entities
+  
+  See `src/guards/contexts/DefineAbilities.js:162-230` for full permission list.
+</Accordion>
+
+<Accordion title="Creador de Sala de Eventos (Venue Creator)">
+  Specialized role for venue management:
+  - Create and edit event venues
+  - Manage venue seating charts
+  - View venue details and events
+  - Cannot: access other modules
+  
+  See `src/guards/contexts/DefineAbilities.js:231-285` for full permission list.
+</Accordion>
+
+### Creating Staff Users
+
+Staff users are created through the staff management interface.
+
+**UI Flow:**
+1. Navigate to Staff List (`src/views/Users/Staff/StaffTable.js`)
+2. Click "Create Staff" button
+3. Fill out the New Staff form (`src/views/Users/NewUsers/NewUsersStaff.js`)
+4. Upload profile image (optional)
+5. Submit to create user account
+
+**Implementation:**
+
+```javascript
+// From src/components/apps/users/NewUsers/NewUserStaffForm.js:103-142
+const userData = {
+  name: values.name,
+  commercial_name: "",
+  email: values.email,
+  phone: values.phone,
+  password: values.password,
+  status: true,
+  id: values.id,
+  id_type: values.id_type
+};
+
+let additionalData = {
+  city: values.city,
+  account_type: values.account_type,
+  country: locations.find(c => c.code === values.country),
+  line: values.line,
+  zip_code: values.zip_code,
+};
+
+const register = await create_staff({ ...userData, ...additionalData });
+
+if (imageReal) {
+  const storageRef = ref(Storage, `u_staff/${register.data.uid}/profile_picture.jpg`);
+  await uploadBytes(storageRef, imageReal);
+  imageUrl = await getDownloadURL(storageRef);
+}
+
+await Firestore.collection(`u_staff`).doc(register.data.uid).update({ image: imageUrl });
+```
+
+**Required Fields:**
+- Email (validated)
+- Name
+- Phone number (validated with MUI Tel Input)
+- ID number and type
+- Address (line, city, zip code, country)
+- Account type (hierarchy level)
+- Password (min 6 characters, with confirmation)
+
+**Data Storage:**
+Staff data is stored in the `u_staff` Firestore collection with the following structure:
+
+```javascript
+{
+  name: string,
+  email: string,
+  phone: string,
+  status: boolean,
+  id: string,
+  id_type: string,
+  city: string,
+  account_type: string,
+  country: object,
+  line: string,
+  zip_code: string,
+  image: string (URL),
+  date: {
+    created: timestamp,
+    last_access: timestamp
+  },
+  last_IP: string
+}
+```
+
+## Client Management
+
+Clients are event organizers who use the platform to create and manage their events.
+
+### Creating Client Users
+
+**UI Flow:**
+1. Navigate to Clients List (`src/views/Users/Clients/ClientsTable.js`)
+2. Click "Create Client" button
+3. Fill out the New Client form (`src/views/Users/NewUsers/NewUsersClient.js`)
+4. Add legal information and bank accounts
+5. Submit to create client account
+
+**Implementation:**
+
+```javascript
+// Similar to staff creation but uses create_client function
+// Stored in u_clients collection
+```
+
+**Client Data Structure:**
+Clients have additional fields for legal and financial information:
+
+```javascript
+{
+  name: string,
+  commercial_name: string,
+  email: string,
+  phone: string,
+  status: boolean,
+  id: string,
+  id_type: string,
+  // Address information
+  city: string,
+  country: object,
+  line: string,
+  zip_code: string,
+  // Legal information
+  legal_name: string,
+  legal_id: string,
+  // Bank accounts array
+  bank_accounts: [{
+    account_number: string,
+    bank_name: string,
+    account_type: string
+  }],
+  image: string (URL)
+}
+```
+
+### Client Details View
+
+The client detail view (`src/views/Users/Clients/clients-detail/ClientsDetail.js`) displays:
+
+- **Profile Tab**: Basic information, contact details, legal info
+- **Events Tab**: List of client's events with revenue data
+- **Contracts**: Associated contracts and legal documents
+- **Bank Accounts**: Payment information for payouts
+- **Payouts**: Client payout accounts and history
+
+## Collaborator Management
+
+Collaborators are partners who work with Clients on specific events.
+
+### Creating Collaborators
+
+**UI Flow:**
+1. Navigate to Collaborators List (`src/views/Users/Collaborators/CollaboratorsTable.js`)
+2. Click "Create Collaborator" button
+3. Fill out the New Collaborator form (`src/views/Users/NewUsers/NewUsersCollab.js`)
+4. Assign to a client
+5. Submit to create collaborator account
+
+**Implementation:**
+
+```javascript
+// Uses create_collaborator function
+// Stored in u_collaborators collection
+// Includes client_id for association
+```
+
+**Collaborator Association:**
+Collaborators are linked to clients and can be assigned to specific events. The system maintains this relationship through the `client_id` field.
+
+### Client-Specific Collaborators View
+
+Clients can view their collaborators through the `ClientCollaboratorsTable` component, which filters collaborators by client ID.
+
+## Customer Management
+
+Customers are end users who purchase tickets. They are created automatically during the ticket purchase process.
+
+### Customer Data Collection
+
+Customer information is captured during ticket purchase and includes:
+
+```javascript
+{
+  customer_name: string,
+  customer_id: string,
+  customer_email: string,
+  customer_phone: string,
+  // Associated with orders and tickets
+}
+```
+
+### Customer Details View
+
+The customer detail view (`src/views/Users/Customers/customers-detail/CustomerDetail.js`) provides:
+
+- **Customer Profile**: Basic information from `src/views/Users/Customers/customers-detail/CustomerDetail.js`
+- **Orders Tab**: Purchase history (`src/views/Users/Customers/customers-detail/CustomerOrders.js`)
+- **Tickets Tab**: Owned tickets (`src/views/Users/Customers/customers-detail/CustomerTickets.js`)
+
+## User Status Management
+
+All user types support status management:
+
+- **Active (`status: true`)**: User can log in and access the system
+- **Inactive (`status: false`)**: User is blocked from logging in
+
+<Warning>
+  When a staff user's status is set to `false`, they are automatically logged out. See `src/guards/firebase/FirebaseContext.js:28-31` for implementation.
+</Warning>
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:28-31
+const querySnapshot = await Firestore.collection('u_staff').doc(user.uid).get();
+
+if (querySnapshot.data()?.status !== true) {
+  logout();
+}
+```
+
+## Access Tracking
+
+The system tracks user access for security purposes:
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:33-40
+const queryIP = await fetch('https://ipapi.co/json/');
+const data = await queryIP.json();
+
+await Firestore.collection('u_staff').doc(user.uid).update({
+  "date.last_access": firebase.firestore.FieldValue.serverTimestamp(),
+  last_IP: data.ip
+});
+```
+
+Each staff login records:
+- Last access timestamp
+- IP address
+- Country calling code from IP location
+
+## User Lists and Tables
+
+Each user type has a corresponding table view:
+
+- **Staff Table**: `src/components/apps/users/Staff/StaffTableList.js`
+- **Clients Table**: `src/components/apps/users/Clients/ClientsTableList.js`
+- **Collaborators Table**: `src/components/apps/users/Collaborators/CollaboratorsTableList.js`
+- **Customers Table**: `src/components/apps/users/Customers/CustomerTableList.js`
+
+These tables provide:
+- Searchable and filterable lists
+- Sortable columns
+- Quick actions (view, edit, delete)
+- Status indicators
+- Pagination
+
+## Profile Image Management
+
+All user types support profile image uploads:
+
+<Note>
+  Images are limited to 2MB and stored in Firebase Storage under the pattern:
+  - Staff: `u_staff/{uid}/profile_picture.jpg`
+  - Clients: `u_clients/{uid}/profile_picture.jpg`
+  - Collaborators: `u_collaborators/{uid}/profile_picture.jpg`
+</Note>
+
+## User Editing
+
+Users can be edited through dedicated edit forms:
+
+- **Edit Staff**: `src/views/Users/EditUsers/EditUsersStaff.js`
+- **Edit Client**: `src/views/Users/EditUsers/EditUsersClient.js`
+- **Edit Collaborator**: `src/views/Users/EditUsers/EditUsersCollab.js`
+
+The edit forms pre-populate with existing data and allow updating all fields except email (which is the authentication identifier).
+
+## Best Practices
+
+<Check>
+  **User Creation Best Practices:**
+  - Always validate email addresses before creating users
+  - Enforce strong passwords (minimum 6 characters)
+  - Verify phone numbers using the MUI Tel Input validator
+  - Upload profile images under 2MB
+  - Assign appropriate account types based on responsibilities
+  - Regularly review and update user statuses
+</Check>
+
+## Related Features
+
+- [Authentication & Permissions](/features/authentication) - Understanding user roles and access control
+- [Event Management](/features/event-management) - How clients create and manage events
+- [Financial Operations](/features/financial-operations) - Client payouts and financial tracking

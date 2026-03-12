@@ -1,0 +1,610 @@
+---
+title: 'Event Notifications'
+description: 'Send push notifications and alerts to event attendees and stakeholders'
+---
+
+# Event Notifications
+
+Communicate with event attendees, staff, and stakeholders through the TMT notification system. Send real-time updates, alerts, and important information directly to users' devices.
+
+## Overview
+
+The notification system enables you to:
+
+- **Send push notifications** to attendees and staff
+- **Target specific audiences** based on ticket type or credentials
+- **Schedule notifications** for future delivery
+- **Track notification delivery** and engagement
+- **Send emergency alerts** for critical situations
+
+## Accessing Notifications
+
+Navigate to **Events** → Select your event → **Notificaciones**
+
+## Notification Types
+
+### General Announcements
+
+Broadcast messages to all event participants:
+- Event schedule changes
+- General information updates
+- Welcome messages
+- Post-event thank you messages
+
+### Targeted Notifications
+
+Send messages to specific groups:
+- Zone-specific updates (e.g., "VIP lounge now open")
+- Credential-based alerts (e.g., staff call times)
+- Time-sensitive reminders
+
+### Emergency Alerts
+
+Critical notifications for urgent situations:
+- Safety alerts
+- Evacuation notices
+- Weather warnings
+- Event cancellations
+
+## Creating Notifications
+
+<Steps>
+
+### Step 1: Access Notification Creation
+
+From the event notifications page, click **Crear Notificación**.
+
+### Step 2: Compose Notification
+
+Enter your notification content:
+
+```jsx
+<Grid container spacing={3}>
+  <Grid item xs={12}>
+    <CustomFormLabel htmlFor="title">
+      Título de la Notificación
+    </CustomFormLabel>
+    <CustomTextField
+      id="title"
+      placeholder="Ej: Puertas Abiertas en 30 Minutos"
+      fullWidth
+      {...getFieldProps('title')}
+      error={Boolean(touched.title && errors.title)}
+      helperText={touched.title && errors.title}
+    />
+  </Grid>
+  
+  <Grid item xs={12}>
+    <CustomFormLabel htmlFor="body">
+      Mensaje
+    </CustomFormLabel>
+    <CustomTextField
+      id="body"
+      multiline
+      rows={4}
+      placeholder="Escribe el mensaje completo de la notificación..."
+      fullWidth
+      {...getFieldProps('body')}
+      error={Boolean(touched.body && errors.body)}
+      helperText={touched.body && errors.body}
+    />
+  </Grid>
+</Grid>
+```
+
+**Best Practices for Notification Content:**
+
+- **Keep titles under 50 characters**
+- **Body text under 200 characters** for optimal display
+- **Use clear, actionable language**
+- **Include time-sensitive information upfront**
+- **Avoid special characters** that may not display correctly
+
+### Step 3: Select Target Audience
+
+Define who should receive the notification:
+
+```jsx
+<CustomFormLabel htmlFor="audience">
+  Audiencia
+</CustomFormLabel>
+<CustomSelect
+  id="audience"
+  value={formik.values.audience}
+  onChange={(e) => setFieldValue('audience', e.target.value)}
+  fullWidth
+>
+  <MenuItem value="all">Todos los Asistentes</MenuItem>
+  <MenuItem value="ticket_holders">Solo Compradores de Tickets</MenuItem>
+  <MenuItem value="credentials">Personal con Credenciales</MenuItem>
+  <MenuItem value="zone_specific">Zona Específica</MenuItem>
+  <MenuItem value="custom">Audiencia Personalizada</MenuItem>
+</CustomSelect>
+```
+
+**Audience Targeting Options:**
+
+| Option | Recipients | Use Case |
+|--------|------------|----------|
+| Todos los Asistentes | All users with event access | General announcements |
+| Solo Compradores | Users who purchased tickets | Ticketholder-only updates |
+| Personal con Credenciales | Staff, vendors, artists | Operations updates |
+| Zona Específica | Users in selected zones | Zone-specific information |
+| Audiencia Personalizada | Custom filter criteria | Advanced targeting |
+
+### Step 4: Configure Zone-Specific Targeting (Optional)
+
+If sending to specific zones:
+
+```jsx
+<Autocomplete
+  multiple
+  id="zones"
+  options={eventZones}
+  disableCloseOnSelect
+  getOptionLabel={(option) => option.name}
+  renderOption={(props, option, { selected }) => (
+    <li {...props}>
+      <CustomCheckbox checked={selected} />
+      {option.name}
+    </li>
+  )}
+  value={formik.values.zones}
+  onChange={(e, newValue) => setFieldValue('zones', newValue)}
+  renderInput={(params) => (
+    <CustomTextField
+      {...params}
+      placeholder="Selecciona zonas"
+    />
+  )}
+/>
+```
+
+### Step 5: Set Priority Level
+
+Define notification priority:
+
+```jsx
+<CustomFormLabel htmlFor="priority">
+  Prioridad
+</CustomFormLabel>
+<CustomSelect
+  id="priority"
+  value={formik.values.priority}
+  onChange={(e) => setFieldValue('priority', e.target.value)}
+>
+  <MenuItem value="normal">Normal</MenuItem>
+  <MenuItem value="high">Alta</MenuItem>
+  <MenuItem value="urgent">Urgente</MenuItem>
+</CustomSelect>
+```
+
+**Priority Levels:**
+
+- **Normal** - Standard notifications, can be dismissed
+- **Alta** - Important updates, persistent notification
+- **Urgente** - Emergency alerts, requires acknowledgment
+
+<Warning>
+Use "Urgente" priority only for true emergencies. Overuse reduces user response to critical alerts.
+</Warning>
+
+### Step 6: Schedule or Send Immediately
+
+Choose when to send:
+
+```jsx
+<FormControlLabel
+  control={
+    <CustomSwitch
+      checked={scheduleNotification}
+      onChange={(e) => setScheduleNotification(e.target.checked)}
+    />
+  }
+  label="Programar envío"
+/>
+
+{scheduleNotification && (
+  <CustomDateTimePicker
+    label="Fecha y hora de envío"
+    value={scheduledTime}
+    onChange={(newValue) => setScheduledTime(newValue)}
+    minDateTime={dayjs()}
+    fullWidth
+  />
+)}
+```
+
+### Step 7: Send Notification
+
+Click **Enviar** to dispatch the notification. The system will:
+
+1. Validate notification content
+2. Calculate recipient count
+3. Queue notification for delivery
+4. Send push notifications to devices
+5. Log notification in history
+
+</Steps>
+
+## Notification List View
+
+View all sent notifications:
+
+```jsx
+<DataTable
+  value={rows}
+  paginator
+  rows={10}
+  globalFilterFields={['title', 'body', 'count', 'date_created']}
+  emptyMessage="No se encontraron notificaciones con estos parámetros."
+>
+  <Column 
+    field="title" 
+    header="Título" 
+    body={titleTemplate} 
+    sortable 
+  />
+  <Column 
+    field="body" 
+    header="Cuerpo" 
+    body={bodyTemplate} 
+    sortable 
+  />
+  <Column 
+    field="count" 
+    header="Alcance" 
+    body={countTemplate} 
+    sortable 
+  />
+  <Column 
+    field="date_created" 
+    header="Fecha" 
+    body={dateTemplate} 
+    sortable 
+  />
+</DataTable>
+```
+
+### Notification Card Display
+
+```jsx
+const titleTemplate = (row) => {
+  return (
+    <Typography variant="h6" fontWeight="600">
+      {row.title}
+    </Typography>
+  );
+};
+
+const bodyTemplate = (row) => {
+  return (
+    <Typography variant="subtitle1" fontWeight="500">
+      {row.body}
+    </Typography>
+  );
+};
+
+const countTemplate = (row) => {
+  return (
+    <Typography fontWeight="500">
+      {row.count} destinatarios
+    </Typography>
+  );
+};
+
+const dateTemplate = (row) => {
+  return (
+    <Typography fontWeight="500">
+      {formatDateLocal(row.date_created)}
+    </Typography>
+  );
+};
+```
+
+## Notification Delivery System
+
+Notifications are sent through Firebase Cloud Messaging:
+
+```javascript
+// Notification creation and dispatch
+const sendEventNotification = async (notificationData) => {
+  const { title, body, audience, eventId, priority } = notificationData;
+  
+  // Get recipient tokens based on audience
+  const recipientTokens = await getRecipientTokens(audience, eventId);
+  
+  // Create notification payload
+  const payload = {
+    notification: {
+      title: title,
+      body: body,
+      priority: priority || 'normal',
+      sound: priority === 'urgent' ? 'alert' : 'default',
+      badge: '1'
+    },
+    data: {
+      event_id: eventId,
+      notification_type: 'event_update',
+      timestamp: new Date().toISOString()
+    }
+  };
+  
+  // Send to FCM
+  const response = await admin.messaging().sendToDevice(
+    recipientTokens,
+    payload
+  );
+  
+  // Log notification
+  await Firestore.collection('events')
+    .doc(eventId)
+    .collection('notifications')
+    .add({
+      title,
+      body,
+      count: recipientTokens.length,
+      date_created: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'sent',
+      delivery_stats: response
+    });
+  
+  return response;
+};
+```
+
+## Recipient Token Management
+
+Fetch device tokens for targeted delivery:
+
+```javascript
+const getRecipientTokens = async (audience, eventId) => {
+  let tokens = [];
+  
+  switch (audience) {
+    case 'all':
+      // Get all users with event access
+      const allUsers = await Firestore
+        .collection('user_event_access')
+        .where('event_id', '==', eventId)
+        .get();
+      tokens = allUsers.docs.map(doc => doc.data().fcm_token);
+      break;
+      
+    case 'ticket_holders':
+      // Get users who purchased tickets
+      const orders = await Firestore
+        .collection('orders')
+        .where('event_id', '==', eventId)
+        .where('status', '==', true)
+        .get();
+      const userIds = orders.docs.map(doc => doc.data().user_id);
+      const users = await Firestore
+        .collection('users')
+        .where(firebase.firestore.FieldPath.documentId(), 'in', userIds)
+        .get();
+      tokens = users.docs.map(doc => doc.data().fcm_token);
+      break;
+      
+    case 'credentials':
+      // Get credential holders
+      const credentials = await Firestore
+        .collection('events')
+        .doc(eventId)
+        .collection('credentials')
+        .where('status', '==', true)
+        .get();
+      tokens = credentials.docs.map(doc => doc.data().holder?.fcm_token);
+      break;
+      
+    default:
+      tokens = [];
+  }
+  
+  return tokens.filter(token => token); // Remove null/undefined
+};
+```
+
+## Notification Templates
+
+### Event Reminder
+
+```
+Title: "Tu Evento Comienza Pronto"
+Body: "[Event Name] comienza en 2 horas. ¡No olvides tu boleto!"
+Priority: Normal
+Audience: Solo Compradores de Tickets
+```
+
+### Gates Opening
+
+```
+Title: "Puertas Abiertas"
+Body: "Las puertas están ahora abiertas. Por favor dirígete a la entrada correspondiente a tu zona."
+Priority: Normal
+Audience: Todos los Asistentes
+```
+
+### Schedule Change
+
+```
+Title: "Cambio de Horario"
+Body: "[Artist Name] subirá al escenario a las [New Time]. Lamentamos el inconveniente."
+Priority: Alta
+Audience: Todos los Asistentes
+```
+
+### Weather Alert
+
+```
+Title: "⚠️ Alerta Meteorológica"
+Body: "Se pronostica lluvia. Por favor trae paraguas o impermeable."
+Priority: Alta
+Audience: Todos los Asistentes
+```
+
+### Emergency Evacuation
+
+```
+Title: "🚨 EVACUACIÓN INMEDIATA"
+Body: "Por favor evacua el recinto de manera ordenada por las salidas de emergencia. Sigue las instrucciones del personal."
+Priority: Urgente
+Audience: Todos los Asistentes
+```
+
+### Staff Call Time
+
+```
+Title: "Llamado de Personal"
+Body: "El personal de [Department] debe reportarse a [Location] en 15 minutos."
+Priority: Alta
+Audience: Personal con Credenciales
+```
+
+## Searching Notifications
+
+Filter notification history:
+
+```jsx
+<Paper elevation={0}>
+  <IconSearch size="1.1rem" />
+  <CustomTextField
+    value={globalFilterValue}
+    onChange={onGlobalFilterChange}
+    placeholder="Buscar notificación..."
+    fullWidth
+  />
+  <IconButton size="small" color="primary">
+    <IconFilter size="1.1rem" />
+  </IconButton>
+</Paper>
+```
+
+Search by:
+- Notification title
+- Message content
+- Date sent
+- Recipient count
+
+## Exporting Notification History
+
+Export notification logs:
+
+```jsx
+<Tooltip title="Descargar CSV">
+  <IconButton onClick={() => exportC(false)}>
+    <IconDownload size="1.1rem" />
+  </IconButton>
+</Tooltip>
+```
+
+Exported data includes:
+- Notification title and body
+- Send date and time
+- Target audience
+- Recipient count
+- Delivery status
+
+## Notification Delivery Tracking
+
+Monitor notification performance:
+
+```javascript
+const getNotificationStats = async (notificationId, eventId) => {
+  const notification = await Firestore
+    .collection('events')
+    .doc(eventId)
+    .collection('notifications')
+    .doc(notificationId)
+    .get();
+  
+  const stats = notification.data().delivery_stats;
+  
+  return {
+    sent: stats.successCount || 0,
+    failed: stats.failureCount || 0,
+    opened: stats.openedCount || 0, // Requires app tracking
+    clicked: stats.clickedCount || 0
+  };
+};
+```
+
+## Best Practices
+
+### Timing
+
+- **Send reminders** 24 hours, 2 hours, and 30 minutes before event
+- **Avoid late night notifications** (10pm - 8am) unless urgent
+- **Schedule non-critical messages** during business hours
+- **Space notifications** at least 1 hour apart
+
+### Content
+
+- **Be concise** - Users see limited characters on lock screen
+- **Front-load key information** in title and first line
+- **Use emoji sparingly** for emphasis or urgency indicators
+- **Include clear call-to-action** when applicable
+- **Proofread carefully** - notifications cannot be recalled
+
+### Frequency
+
+- **Limit to 3-5 notifications** per event for non-staff
+- **More frequent for staff** with operational updates
+- **Consider notification fatigue** - quality over quantity
+- **Allow users to opt-out** of non-critical notifications
+
+### Targeting
+
+- **Use zone targeting** for large venues with different schedules
+- **Segment by ticket type** for VIP experiences
+- **Separate staff communications** from attendee messages
+- **Test with small group** before mass sending
+
+## Troubleshooting
+
+### Notifications Not Received
+
+If users report not receiving notifications:
+
+<Warning>
+1. **Verify app permissions** - Push notifications must be enabled
+2. **Check device tokens** - Ensure FCM tokens are valid
+3. **Review targeting** - Confirm user is in selected audience
+4. **Test notification settings** - Some devices have aggressive battery savers
+</Warning>
+
+### Low Open Rates
+
+If notifications have poor engagement:
+
+1. **Review content** - Is the title compelling?
+2. **Check timing** - Are you sending at optimal times?
+3. **Reduce frequency** - Are you over-notifying?
+4. **Improve targeting** - Are messages relevant to recipients?
+
+### Delivery Failures
+
+If notifications fail to send:
+
+1. Check Firebase Cloud Messaging quota
+2. Verify API keys are valid
+3. Review error logs in Firebase console
+4. Ensure recipient tokens are current
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Orders Management" icon="shopping-cart" href="/guides/events/orders">
+    Manage ticket orders and sales
+  </Card>
+  <Card title="Event Analytics" icon="chart-bar" href="/guides/analytics/events">
+    View notification engagement metrics
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+- [Event Management](/features/event-management)
+- [Event Credentials](/guides/events/credentials)
+- [Creating Events](/guides/events/creating-events)
+- [Mobile App Configuration](/guides/mobile/notifications)

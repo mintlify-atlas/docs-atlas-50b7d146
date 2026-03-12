@@ -1,0 +1,446 @@
+---
+title: Event Management
+description: Create and manage events with contracts, venues, ticketing, and financial tracking
+icon: 'calendar-days'
+---
+
+The Event Management system is the core of the TMT platform, enabling clients and staff to create, configure, and monitor events from creation through completion.
+
+## Event Lifecycle
+
+<Steps>
+  <Step title="Event Creation">
+    Create an event with basic information, client assignment, venue selection, and contract linking
+  </Step>
+  <Step title="Event Configuration">
+    Set up zones, seating, pricing, and financial splits
+  </Step>
+  <Step title="Ticket Generation">
+    Generate tickets based on seating configuration
+  </Step>
+  <Step title="Event Monitoring">
+    Track sales, orders, and revenue in real-time
+  </Step>
+  <Step title="Event Completion">
+    Process final transactions and payouts
+  </Step>
+</Steps>
+
+## Creating Events
+
+### Event Creation UI Flow
+
+**Location**: `src/views/events/new-events/NewEvents.js`
+
+The event creation form collects comprehensive information:
+
+1. **Basic Information**
+   - Event name
+   - Event type (from setup configuration)
+   - Event description
+   - Event image (max 2MB)
+
+2. **Client & Contract Assignment**
+   - Select client (event organizer)
+   - Link existing contract
+   - Link legal contract
+   - Upload terms of service PDF
+
+3. **Venue Selection**
+   - Choose event venue
+   - Select Seats.io chart from venue
+   - Preview seating layout
+
+4. **Date & Time**
+   - Event start date/time
+   - Event end date/time
+   - Timezone handling
+
+### Event Creation Implementation
+
+```javascript
+// From src/components/apps/events/NewEventForm.js:51-75
+const searchContracts = async (client_id) => {
+  const querySnapshot = await Firestore.collection('contracts')
+    .where('user_id', '==', client_id).get();
+  const querySnapshot2 = await Firestore.collection('contracts_legal')
+    .where('client_id', '==', client_id).get();
+
+  const ContractsData = querySnapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      value: doc.id,
+      name: data.name
+    };
+  });
+
+  const ContractsLegalData = querySnapshot2.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      value: { id: doc.id, doc: data },
+      name: data.legal_name
+    };
+  });
+
+  setContracts(ContractsData);
+  setContractsLegal(ContractsLegalData);
+};
+```
+
+<Note>
+  When a client is selected, the system automatically fetches their associated contracts from both the `contracts` and `contracts_legal` collections to enable contract linking.
+</Note>
+
+### Seats.io Integration
+
+The platform integrates with Seats.io for seating chart management:
+
+```javascript
+// From src/components/apps/events/NewEventForm.js
+// List available charts from Seats.io
+const charts = await list_charts_seatsio();
+
+// Create event in Seats.io
+const seatsioEvent = await create_event_seatsio({
+  chartKey: selectedChartKey,
+  eventKey: generatedEventKey
+});
+```
+
+The `SeatsioMapViewer` component displays the seating chart preview during event creation.
+
+## Event Data Structure
+
+Events are stored in the `events` Firestore collection:
+
+```javascript
+{
+  name: string,
+  event_type: string,
+  description: string,
+  image: string (URL),
+  client_id: string,
+  client_name: string,
+  contract_id: string,
+  contract_legal_id: string,
+  venue_id: string,
+  venue_name: string,
+  seatsio_chart_key: string,
+  seatsio_event_key: string,
+  event_start_date: timestamp,
+  event_end_date: timestamp,
+  status: string,
+  terms_of_service_url: string,
+  date: {
+    created: timestamp,
+    updated: timestamp
+  },
+  // Financial data
+  revenue: number,
+  tickets_sold: number,
+  tickets_total: number
+}
+```
+
+## Event Lists
+
+### Staff Event List
+
+**Location**: `src/views/events/list-events/EventsList.js`
+
+Staff can view all events across all clients with the `EventsTable` component (`src/components/apps/events/EventsTable.js`).
+
+### Client Event List
+
+**Location**: `src/views/events/list-events/ClientEventsList.js`
+
+Clients see only their own events through the `ClientEventsTable` component, which filters events by `client_id`.
+
+## Event Details
+
+**Location**: `src/views/events/event-details/EventDetails.js`
+
+The event details view provides comprehensive information:
+
+### Profile Tab
+
+From `src/components/apps/events/event-detail/ProfileTab.js`:
+
+- **Event Metadata**: Name, type, dates, status
+- **Client Information**: Organizer details and contact
+- **Contracts Card**: Linked contracts and legal documents
+- **Revenue Updates**: Real-time sales and revenue tracking
+- **Top Performers**: Best-selling zones or ticket types
+
+### Status Management
+
+```javascript
+// From src/components/apps/events/event-detail/StatusSelect.js
+// Event status transitions
+const statuses = [
+  'draft',
+  'published',
+  'on_sale',
+  'sold_out',
+  'completed',
+  'cancelled'
+];
+```
+
+<Warning>
+  Changing event status requires the `change:eventsStatus` permission. Only Administrador role has this permission by default.
+</Warning>
+
+## Event Configuration
+
+After creating an event, additional setup is required:
+
+### Zone Setup
+
+**Location**: `src/views/events/setup-event/SetupZonesEvent.js`
+
+Configure event zones from the Seats.io seating chart:
+
+```javascript
+// From src/components/apps/events/setup-event/EventZones.js
+// Import zones from Seats.io
+const zones = await SeatsioZoneImporter({ chartKey, eventKey });
+
+// Configure zone pricing
+zones.forEach(zone => {
+  zone.price = calculatedPrice;
+  zone.service_fee = serviceFee;
+  zone.capacity = zoneCapacity;
+});
+```
+
+### Financial Splits
+
+**Location**: `src/views/events/setup-event/SetupSplitEvent.js`
+
+Define how revenue is split between parties:
+
+```javascript
+// From src/components/apps/events/setup-event/SetupEventSplitForm.js
+{
+  client_percentage: number,
+  platform_percentage: number,
+  collaborator_splits: [{
+    collaborator_id: string,
+    percentage: number
+  }]
+}
+```
+
+### Financial Adjustments
+
+**Location**: `src/components/apps/events/setup-event/SetupFinancialAdjustments.js`
+
+Apply adjustments for:
+- Platform fees
+- Service charges
+- Discounts
+- Additional costs
+
+## Event Tickets
+
+**Location**: `src/views/Tickets/TicketTable.js`
+
+View all tickets for an event with:
+- Ticket list with search and filters
+- Customer information
+- Seat assignments
+- Order associations
+- Status tracking (active, used, cancelled)
+
+See [Ticketing System](/features/ticketing) for detailed ticket management.
+
+## Event Orders
+
+**Location**: `src/views/events/orders-event/OrdersEvent.js`
+
+Track all orders placed for an event:
+
+```javascript
+// From src/components/apps/events/orders-events/OrdersTable.js
+// Order data includes:
+{
+  order_id: string,
+  customer_name: string,
+  customer_email: string,
+  tickets_count: number,
+  total_amount: number,
+  order_date: timestamp,
+  payment_status: string,
+  order_status: string
+}
+```
+
+Order details can be viewed with the `ordersDetail` component.
+
+## Event Notifications
+
+**Location**: `src/views/events/notifications-events/NotificationsEvents.js`
+
+Send notifications to ticket holders:
+
+### Creating Notifications
+
+**Location**: `src/views/events/notifications-events/new-notifications-events/NewNotificationsEvents.js`
+
+```javascript
+// From src/components/apps/events/notifications/new-notifications-events/NewNotificationsEventsForm.js
+{
+  title: string,
+  message: string,
+  send_to: 'all' | 'zone' | 'specific',
+  target_zones: [string],
+  target_customers: [string],
+  scheduled_time: timestamp,
+  notification_type: 'email' | 'push' | 'both'
+}
+```
+
+Notifications are stored in the `events/{event_id}/notifications` sub-collection.
+
+## Event Credentials
+
+Manage special access credentials for staff, VIP, or backstage access.
+
+### Credentials List
+
+**Location**: `src/views/events/credentials-events/CredentialsEvents.js`
+
+View all credentials with the `CredentialsTableList` component.
+
+### Creating Credentials
+
+**Location**: `src/views/events/credentials-events/new-credentials-events/NewCredentialsEvents.js`
+
+```javascript
+// From src/components/apps/events/credentials-events/new-credentials-events/NewCredentialsEventsForm.js:55-72
+const credentialData = {
+  access: values.access, // Access level
+  date: {
+    created: firebase.firestore.FieldValue.serverTimestamp(),
+    updated: ''
+  },
+  description: values.description,
+  holder: {
+    id: values.holder_id,
+    name: values.holder_name
+  },
+  name: values.name,
+  status: true,
+};
+
+await Firestore.collection(`events/${event_id}/credentials`).add(credentialData);
+```
+
+**Required Fields:**
+- Name
+- Access level
+- Description
+- Holder name
+- Holder ID
+
+### Credential Details
+
+**Location**: `src/views/events/credentials-events/detail-credentials-event/DetailCredentialsEvent.js`
+
+View detailed credential information including holder details and access permissions.
+
+## Event Editing
+
+**Location**: `src/views/events/edit-events/EditEvents.js`
+
+Edit existing event details through the `EditEventForm` component. All fields from event creation can be modified except:
+- Event ID (immutable)
+- Created date (historical)
+- Client assignment (requires permission)
+
+## Event Billing
+
+**Location**: `src/views/event-billing/` directory
+
+Manage event-specific billing:
+- Invoice generation
+- Payment tracking
+- Revenue reports
+- Client billing statements
+
+## Pre-Event Setup (Pre-Montaje)
+
+The system includes pre-event setup functionality for logistics:
+
+<Accordion title="Pre-Montaje Access">
+  Access requires the `read:eventsPreMontaje` permission. Coordinador and Soporte roles have this access.
+  
+  Pre-montaje includes:
+  - Venue preparation checklists
+  - Equipment setup
+  - Staff assignments
+  - Technical requirements
+</Accordion>
+
+## Event Permissions
+
+Event management requires specific permissions from `src/guards/contexts/DefineAbilities.js`:
+
+```javascript
+// Creating events
+can('create', 'events') // Coordinador and above
+
+// Editing events
+can('edit', 'events') // Coordinador and above
+
+// Viewing event details
+can('view', 'ViewEventsDetail') // Most roles
+
+// Changing event status
+can('change', 'eventsStatus') // Administrador only
+
+// Event configuration
+can('view', 'ViewEventsConfig') // Coordinador, Soporte
+can('view', 'ViewEventsConfigZone') // Coordinador
+can('view', 'ViewEventsConfigSplit') // Coordinador
+```
+
+## Revenue Tracking
+
+The `RevenueUpdates` component (`src/components/apps/events/event-detail/RevenueUpdates.js`) provides real-time metrics:
+
+- Total revenue
+- Tickets sold / Total capacity
+- Average ticket price
+- Revenue by zone
+- Sales trends over time
+
+## Client Information Display
+
+The `ClientInfo` component (`src/components/apps/events/event-detail/ClientInfo.js`) shows:
+- Client name and contact
+- Associated contracts
+- Client payment information
+- Client-specific notes
+
+## Best Practices
+
+<Check>
+  **Event Management Best Practices:**
+  - Always link events to valid contracts
+  - Upload event images under 2MB
+  - Configure zones and pricing before ticket sales
+  - Set up financial splits before accepting payments
+  - Test seating chart integration before going live
+  - Send test notifications before bulk sends
+  - Monitor revenue and sales regularly
+  - Update event status as it progresses
+</Check>
+
+## Related Features
+
+- [Venue Management](/features/venue-management) - Setting up event venues
+- [Ticketing System](/features/ticketing) - Ticket generation and management
+- [Financial Operations](/features/financial-operations) - Revenue and payouts
+- [User Management](/features/user-management) - Client and collaborator management

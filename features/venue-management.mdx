@@ -1,0 +1,383 @@
+---
+title: Venue Management
+description: Manage event venues with Seats.io integration for seating charts and capacity management
+icon: 'building'
+---
+
+The Venue Management system allows you to create and manage event venues (salones de eventos) with integrated seating chart capabilities powered by Seats.io.
+
+## Overview
+
+Venues are physical locations where events take place. Each venue can have:
+
+- Basic information (name, location, capacity)
+- Address and contact details
+- Seats.io seating charts for visual layout
+- Multiple zones and sections
+- Associated events history
+
+<Note>
+  Venue management requires specific permissions. The "Creador de Sala de Eventos" role is dedicated to venue creation and management.
+</Note>
+
+## Venue List
+
+**Location**: `src/views/event-venues/event-venues-list/EventVenuesList.js`
+
+The venue list displays all event venues with:
+
+- Venue name and location
+- Capacity information
+- Number of associated events
+- Status indicators
+- Quick action buttons (view, edit)
+
+Implemented in `src/components/apps/event-venues/EventVenuesTable.js`.
+
+## Creating Venues
+
+**Location**: `src/views/event-venues/new-event-venues/NewEventVenues.js`
+
+### Venue Creation UI Flow
+
+<Steps>
+  <Step title="Basic Information">
+    Enter venue name, description, and type
+  </Step>
+  <Step title="Location Details">
+    Provide address, city, country, and zip code
+  </Step>
+  <Step title="Capacity & Layout">
+    Define total capacity and layout type
+  </Step>
+  <Step title="Seats.io Integration">
+    Create or link a seating chart from Seats.io
+  </Step>
+  <Step title="Save & Configure">
+    Save the venue and configure zones
+  </Step>
+</Steps>
+
+### Venue Data Structure
+
+Venues are stored in the `event_venues` Firestore collection:
+
+```javascript
+{
+  name: string,
+  description: string,
+  venue_type: string,
+  // Address information
+  address: {
+    line: string,
+    city: string,
+    country: object,
+    zip_code: string
+  },
+  // Capacity
+  capacity: number,
+  layout_type: string, // 'seated', 'standing', 'mixed'
+  // Seats.io integration
+  seatsio_chart_key: string,
+  seatsio_workspace_key: string,
+  // Metadata
+  date: {
+    created: timestamp,
+    updated: timestamp
+  },
+  status: boolean,
+  // Statistics
+  events_count: number,
+  total_revenue: number
+}
+```
+
+### Venue Creation Implementation
+
+The `NewEventVenueForm` component (`src/components/apps/events/NewEventForm.js` - note: the file path suggests it's reused) handles venue creation with validation:
+
+**Required Fields:**
+- Venue name
+- Address (line, city, zip code, country)
+- Capacity
+- Layout type
+
+**Optional Fields:**
+- Description
+- Seats.io chart association
+- Contact information
+- Amenities and features
+
+## Seats.io Integration
+
+The TMT platform integrates with Seats.io for advanced seating chart management.
+
+### Listing Available Charts
+
+```javascript
+// From the codebase pattern
+const charts = await list_charts_seatsio();
+
+// Returns array of charts:
+[
+  {
+    key: string,
+    name: string,
+    status: string,
+    publishedVersionThumbnailUrl: string
+  }
+]
+```
+
+### Creating Seats.io Events
+
+When an event is created using this venue:
+
+```javascript
+const seatsioEvent = await create_event_seatsio({
+  chartKey: venue.seatsio_chart_key,
+  eventKey: generatedEventKey
+});
+```
+
+### Seating Chart Visualization
+
+The `SeatsioMapViewer` component displays interactive seating charts:
+
+```jsx
+// From src/components/apps/events/NewEventForm.js
+<SeatsioMapViewer 
+  chartKey={selectedVenueData.seatsio_chart_key}
+  eventKey={eventKey}
+  mode="preview" // or "selection" for interactive booking
+/>
+```
+
+<Accordion title="Seats.io Configuration">
+  The platform uses Seats.io's JavaScript SDK for rendering seating charts. Configuration includes:
+  - Workspace key for API authentication
+  - Chart key for specific venue layouts
+  - Event key for session management
+  - Custom styling to match TMT branding
+</Accordion>
+
+## Venue Details
+
+**Location**: `src/views/event-venues/detail-event-venues/DetailEventVenues.js`
+
+The venue details view provides comprehensive information:
+
+### Venue Information Tabs
+
+1. **Overview Tab**
+   - Venue name and description
+   - Address and location
+   - Capacity and layout information
+   - Seating chart preview
+
+2. **Events Tab** (`src/views/event-venues/events-event-venues/EventsEventVenues.js`)
+   - List of events held at this venue
+   - Past and upcoming events
+   - Revenue generated per event
+   - Attendance statistics
+
+3. **Layout Tab**
+   - Seats.io seating chart
+   - Zone configuration
+   - Capacity breakdown by section
+
+4. **Statistics Tab**
+   - Total events hosted
+   - Total tickets sold
+   - Average occupancy rate
+   - Revenue history
+
+## Editing Venues
+
+**Location**: `src/views/event-venues/edit-event-venues/EditEventVenues.js`
+
+The venue edit form allows updating:
+
+- Basic information (name, description)
+- Address and location details
+- Capacity and layout type
+- Status (active/inactive)
+- Seats.io chart association
+
+<Warning>
+  Changing a venue's seating chart affects all future events. Existing events retain their original chart configuration.
+</Warning>
+
+## Zone Configuration
+
+Venues are divided into zones for pricing and capacity management:
+
+```javascript
+// Zone structure
+{
+  zone_id: string,
+  zone_name: string,
+  capacity: number,
+  section_type: string, // 'VIP', 'General', 'Balcony', etc.
+  default_price: number,
+  seatsio_category: string // Maps to Seats.io category
+}
+```
+
+### Importing Zones from Seats.io
+
+```javascript
+// From src/components/apps/events/setup-event/SeatsioZoneImporter.js
+const zones = await importZonesFromSeatsio({
+  chartKey: venue.seatsio_chart_key
+});
+
+// Automatically creates zone structure from Seats.io categories
+```
+
+## Venue Events List
+
+**Location**: `src/views/event-venues/events-event-venues/EventsEventVenues.js`
+
+View all events associated with a venue:
+
+- Event name and date
+- Client/organizer
+- Tickets sold / Capacity
+- Revenue generated
+- Event status
+
+## Venue Permissions
+
+Venue management requires specific permissions from `src/guards/contexts/DefineAbilities.js`:
+
+```javascript
+// Creating venues
+can('create', 'EventVenue') // Coordinador, Creador de Sala de Eventos
+
+// Editing venues  
+can('edit', 'eventVenues') // Creador de Sala de Eventos
+
+// Viewing venue details
+can('read', 'EventVenueDetail') // Coordinador, Soporte, Creador de Sala de Eventos
+can('view', 'ViewEventVenue') // Multiple roles
+can('view', 'ViewEventVenueDetail') // Multiple roles
+
+// Viewing venue events
+can('view', 'ViewEventVenueEvents') // Creador de Sala de Eventos
+```
+
+### Creador de Sala de Eventos Role
+
+This specialized role has permissions exclusively for venue management:
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:275-284
+can: [
+  ['create', 'EventVenue'],
+  ['edit', 'eventVenues'],
+  ['read', 'EventVenueDetail'],
+  ['view', 'ViewEventVenue'],
+  ['view', 'ViewEventVenueDetail'],
+  ['view', 'ViewEventVenueCreate'],
+  ['view', 'ViewEventVenueEdit'],
+  ['view', 'ViewEventVenueEvents'],
+]
+```
+
+## Venue Capacity Management
+
+The system tracks capacity at multiple levels:
+
+1. **Total Venue Capacity**: Maximum number of attendees
+2. **Zone Capacity**: Capacity per zone/section
+3. **Available Capacity**: Real-time tracking during ticket sales
+4. **Reserved Capacity**: Tickets held but not purchased
+
+```javascript
+// Capacity calculation example
+const availableCapacity = venue.capacity - tickets_sold - tickets_reserved;
+```
+
+## Venue Status
+
+Venues can be active or inactive:
+
+- **Active (`status: true`)**: Available for event creation
+- **Inactive (`status: false`)**: Hidden from venue selection, existing events unaffected
+
+## Best Practices
+
+<Check>
+  **Venue Management Best Practices:**
+  - Create detailed seating charts in Seats.io before venue creation
+  - Test seating chart visualization before assigning to events
+  - Keep venue capacity up to date with fire code regulations
+  - Use consistent zone naming across venues
+  - Document accessibility features in venue description
+  - Regular audit of venue information accuracy
+  - Archive inactive venues rather than deleting them
+  - Maintain historical event data for reporting
+</Check>
+
+## Seats.io Best Practices
+
+<Accordion title="Chart Design Guidelines">
+  When creating seating charts in Seats.io:
+  - Use clear, consistent naming for categories/zones
+  - Include row and seat numbers for seated venues
+  - Mark accessible seating clearly
+  - Test chart responsiveness on mobile devices
+  - Use colors that match your branding
+  - Include stage/performer area for orientation
+  - Add entrance/exit markers for wayfinding
+</Accordion>
+
+<Accordion title="Integration Considerations">
+  Technical considerations:
+  - Each venue should have a unique Seats.io chart
+  - Events create copies of charts (don't modify originals)
+  - Chart keys are immutable after venue creation
+  - Workspace keys are stored securely
+  - API rate limits apply to chart operations
+</Accordion>
+
+## Venue Statistics and Reporting
+
+Venue performance metrics:
+
+- **Utilization Rate**: Percentage of events vs. available dates
+- **Average Occupancy**: Average tickets sold vs. capacity
+- **Revenue per Event**: Average revenue generated
+- **Popular Zones**: Best-selling sections
+- **Peak Seasons**: High-demand periods
+
+## Related Features
+
+- [Event Management](/features/event-management) - Creating events at venues
+- [Ticketing System](/features/ticketing) - Seat selection and ticket assignment
+- [Authentication](/features/authentication) - Venue management permissions
+
+## Troubleshooting
+
+<Accordion title="Seats.io Chart Not Displaying">
+  **Problem**: Seating chart fails to load in venue preview
+  
+  **Solutions**:
+  - Verify the chart key is correct in Seats.io dashboard
+  - Check workspace key authentication
+  - Ensure chart is published in Seats.io
+  - Check browser console for API errors
+  - Verify network connectivity to Seats.io servers
+</Accordion>
+
+<Accordion title="Venue Capacity Mismatch">
+  **Problem**: Venue capacity doesn't match seating chart
+  
+  **Solutions**:
+  - Recalculate capacity from Seats.io chart zones
+  - Account for standing room if mixed layout
+  - Check for disabled seats in chart
+  - Verify zone capacities sum to total
+  - Update venue capacity after chart modifications
+</Accordion>

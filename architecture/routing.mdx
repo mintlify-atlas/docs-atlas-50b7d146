@@ -1,0 +1,603 @@
+---
+title: Routing & Navigation
+description: React Router setup, route structure, lazy loading, and navigation patterns in TradeMaster Transactions
+---
+
+## Overview
+
+TradeMaster Transactions uses **React Router 6.3** for declarative routing with nested layouts, protected routes, and code splitting. The routing system supports three layout types: authenticated full layout, guest blank layout, and error pages.
+
+## Route Configuration
+
+All routes are defined in `src/routes/Router.js` using React Router's object-based configuration.
+
+### Basic Structure
+
+```jsx src/routes/Router.js
+import { Navigate } from 'react-router-dom';
+import AuthGuard from 'src/guards/authGuard/AuthGuard';
+import GuestGuard from 'src/guards/authGuard/GuestGaurd';
+import PermissionGuard from 'src/guards/authGuard/PermissionGuard';
+
+const Router = [
+  {
+    path: '/',
+    element: (
+      <AuthGuard>
+        <FullLayout />
+      </AuthGuard>
+    ),
+    children: [
+      // Protected routes
+    ],
+  },
+  {
+    path: '/auth',
+    element: (
+      <GuestGuard>
+        <BlankLayout />
+      </GuestGuard>
+    ),
+    children: [
+      // Authentication routes
+    ],
+  },
+];
+
+export default Router;
+```
+
+### Using Routes in App
+
+```jsx src/App.jsx
+import { useRoutes } from 'react-router-dom';
+import Router from './routes/Router';
+
+function App() {
+  const routing = useRoutes(Router);
+  
+  return (
+    <ThemeProvider theme={theme}>
+      {routing}
+    </ThemeProvider>
+  );
+}
+```
+
+## Route Groups
+
+Routes are organized into logical groups based on functionality.
+
+### Dashboard Routes
+
+```jsx Dashboard
+{
+  path: '/',
+  element: <Navigate to="/dashboards/modern" />,
+},
+{
+  path: '/dashboards/modern',
+  exact: true,
+  element: <ModernDash />,
+}
+```
+
+### User Management Routes
+
+<CodeGroup>
+```jsx Staff Routes
+// List
+{
+  path: '/usuarios-staff',
+  exact: true,
+  element: (
+    <PermissionGuard action="view" subject="ViewStaff">
+      <StaffTable />
+    </PermissionGuard>
+  ),
+},
+// Detail
+{
+  path: '/usuarios-detalle-staff',
+  element: (
+    <PermissionGuard action="view" subject="ViewStaffDetail">
+      <DetailStaff />
+    </PermissionGuard>
+  ),
+},
+// Create
+{
+  path: '/usuarios-staff-crear',
+  element: (
+    <PermissionGuard action="view" subject="ViewStaffCreate">
+      <NewUsersStaff />
+    </PermissionGuard>
+  ),
+},
+// Edit
+{
+  path: '/usuarios-staff-editar',
+  element: (
+    <PermissionGuard action="view" subject="ViewStaffEdit">
+      <EditUsersStaff />
+    </PermissionGuard>
+  ),
+}
+```
+
+```jsx Client Routes
+{
+  path: '/usuarios-clients',
+  exact: true,
+  element: (
+    <PermissionGuard action="view" subject="ViewClients">
+      <ClientsTable />
+    </PermissionGuard>
+  ),
+},
+{
+  path: '/usuarios-detalle-cliente',
+  element: (
+    <PermissionGuard action="view" subject="ViewClientsDetail">
+      <DetailClient />
+    </PermissionGuard>
+  ),
+}
+```
+</CodeGroup>
+
+### Event Management Routes
+
+```jsx Events
+// Events list
+{
+  path: '/eventos',
+  element: (
+    <PermissionGuard action="view" subject="ViewEvents">
+      <EventsList />
+    </PermissionGuard>
+  ),
+},
+// Create event
+{
+  path: '/eventos-crear',
+  element: (
+    <PermissionGuard action="view" subject="ViewEventsCreate">
+      <NewEvents />
+    </PermissionGuard>
+  ),
+},
+// Event configuration
+{
+  path: '/eventos-config',
+  element: (
+    <PermissionGuard action="view" subject="ViewEventsConfig">
+      <SetupEvent />
+    </PermissionGuard>
+  ),
+},
+// Zone configuration
+{
+  path: '/eventos-config-zonas',
+  element: (
+    <PermissionGuard action="view" subject="ViewEventsConfigZone">
+      <SetupEventZones />
+    </PermissionGuard>
+  ),
+}
+```
+
+### Transaction Routes
+
+```jsx Transactions
+{
+  path: '/transacciones',
+  element: <Transactions />,
+},
+{
+  path: '/transacciones-detalle',
+  element: <TransactionsDetail />,
+},
+{
+  path: '/ordenes',
+  element: <Orders />,
+},
+{
+  path: '/ordenes-detalle',
+  element: <OrdersDetail />,
+}
+```
+
+### Authentication Routes
+
+```jsx Auth Routes
+{
+  path: '/auth',
+  element: (
+    <GuestGuard>
+      <BlankLayout />
+    </GuestGuard>
+  ),
+  children: [
+    { 
+      path: '/auth', 
+      element: <Navigate to="/auth/login" /> 
+    },
+    { 
+      path: '/auth/login', 
+      element: <Login /> 
+    },
+    { 
+      path: '/auth/forgot-password', 
+      element: <ForgotPassword /> 
+    },
+    { 
+      path: '/auth/register', 
+      element: <Register /> 
+    },
+  ],
+}
+```
+
+### Error Routes
+
+```jsx Error Handling
+{
+  path: '/auth',
+  element: <BlankLayout />,
+  children: [
+    { 
+      path: '404', 
+      element: <Error /> 
+    },
+    { 
+      path: 'permissions', 
+      element: <PermissionsValidator /> 
+    },
+    { 
+      path: '*', 
+      element: <Navigate to="/auth/404" /> 
+    },
+  ],
+}
+```
+
+## Lazy Loading
+
+All route components are lazy-loaded using React.lazy() wrapped in a custom `Loadable` component.
+
+### Loadable Wrapper
+
+```jsx src/layouts/full/shared/loadable/Loadable.jsx
+import React, { Suspense } from 'react';
+import Spinner from 'src/views/spinner/Spinner';
+
+const Loadable = (Component) => (props) => (
+  <Suspense fallback={<Spinner />}>
+    <Component {...props} />
+  </Suspense>
+);
+
+export default Loadable;
+```
+
+### Creating Lazy Routes
+
+```jsx Route Lazy Loading
+import { lazy } from 'react';
+import Loadable from '../layouts/full/shared/loadable/Loadable';
+
+// Lazy load components
+const ModernDash = Loadable(
+  lazy(() => import('../views/dashboard/Modern'))
+);
+const StaffTable = Loadable(
+  lazy(() => import('../views/Users/Staff/StaffTable'))
+);
+const ContractsTable = Loadable(
+  lazy(() => import('../views/Contracts/ContractsTable'))
+);
+```
+
+<Note>
+Lazy loading splits code into separate chunks, reducing initial bundle size and improving load time.
+</Note>
+
+## Layouts
+
+The platform uses two main layouts:
+
+### Full Layout
+
+Used for authenticated pages with sidebar, header, and footer:
+
+```jsx Full Layout Structure
+<AuthGuard>
+  <FullLayout>
+    {/* Sidebar */}
+    {/* Header */}
+    {/* Main Content (Outlet) */}
+    {/* Footer */}
+  </FullLayout>
+</AuthGuard>
+```
+
+### Blank Layout
+
+Used for authentication pages and error pages:
+
+```jsx Blank Layout Structure
+<BlankLayout>
+  {/* Simple container (Outlet) */}
+</BlankLayout>
+```
+
+## Navigation
+
+### Programmatic Navigation
+
+Use the `useNavigate` hook for programmatic navigation:
+
+```jsx useNavigate Example
+import { useNavigate } from 'react-router-dom';
+
+function MyComponent() {
+  const navigate = useNavigate();
+
+  const handleViewDetails = (staffId) => {
+    navigate('/usuarios-detalle-staff', { 
+      state: { staffId } 
+    });
+  };
+
+  const handleBack = () => {
+    navigate(-1); // Go back
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleViewDetails('123')}>
+        View Details
+      </button>
+      <button onClick={handleBack}>Back</button>
+    </div>
+  );
+}
+```
+
+### Link Component
+
+Use the `Link` component for declarative navigation:
+
+```jsx Link Example
+import { Link } from 'react-router-dom';
+
+function Navigation() {
+  return (
+    <nav>
+      <Link to="/dashboards/modern">Dashboard</Link>
+      <Link to="/usuarios-staff">Staff</Link>
+      <Link to="/eventos">Events</Link>
+    </nav>
+  );
+}
+```
+
+### Passing State
+
+Pass state between routes using the `state` option:
+
+```jsx Passing State
+// Navigate with state
+navigate('/usuarios-detalle-staff', { 
+  state: { 
+    staffId: '123',
+    from: 'staff-list' 
+  } 
+});
+
+// Receive state
+import { useLocation } from 'react-router-dom';
+
+function DetailPage() {
+  const location = useLocation();
+  const { staffId, from } = location.state || {};
+
+  return <div>Staff ID: {staffId}</div>;
+}
+```
+
+## Route Protection
+
+### Authentication Guard
+
+All authenticated routes are wrapped in `AuthGuard`:
+
+```jsx src/guards/authGuard/AuthGuard.js
+const AuthGuard = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  return children;
+};
+```
+
+### Guest Guard
+
+Authentication routes use `GuestGuard` to redirect authenticated users:
+
+```jsx src/guards/authGuard/GuestGuard.js
+const GuestGuard = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  return children;
+};
+```
+
+### Permission Guard
+
+Individual routes use `PermissionGuard` for role-based access:
+
+```jsx Using PermissionGuard
+<PermissionGuard action="view" subject="ViewStaff">
+  <StaffTable />
+</PermissionGuard>
+```
+
+See [Guards Documentation](/architecture/guards) for detailed information.
+
+## Route Organization
+
+Routes follow a logical hierarchy based on features:
+
+```
+Routes Structure
+/
+├── /dashboards
+│   └── /modern                    # Main dashboard
+├── /usuarios-*                    # User management
+│   ├── /usuarios-staff            # Staff list
+│   ├── /usuarios-clients          # Clients list
+│   ├── /usuarios-collaborators    # Collaborators list
+│   ├── /usuarios-customers        # Customers list
+│   ├── /usuarios-detalle-*        # User details
+│   ├── /usuarios-*-crear          # Create user
+│   └── /usuarios-*-editar         # Edit user
+├── /eventos                       # Event management
+│   ├── /eventos                   # Events list
+│   ├── /eventos-crear             # Create event
+│   ├── /eventos-editar            # Edit event
+│   ├── /eventos-config            # Event configuration
+│   ├── /eventos-config-zonas      # Zone setup
+│   ├── /eventos-credenciales      # Credentials
+│   └── /evento-detalles           # Event details
+├── /tickets                       # Ticket management
+│   ├── /tickets                   # Tickets list
+│   ├── /tickets-detalles          # Ticket details
+│   └── /buscar-ticket             # Search tickets
+├── /transacciones                 # Transaction management
+│   ├── /transacciones             # Transactions list
+│   └── /transacciones-detalle     # Transaction details
+├── /contracts                     # Contract management
+│   ├── /contracts                 # Contracts list
+│   ├── /create-contracts          # Create contract
+│   └── /contract-details          # Contract details
+├── /lista-taquillas               # Office management
+│   ├── /lista-taquillas           # Offices list
+│   ├── /detalles-taquilla         # Office details
+│   ├── /crear-taquilla            # Create office
+│   └── /editar-taquilla           # Edit office
+└── /auth                          # Authentication
+    ├── /auth/login                # Login
+    ├── /auth/register             # Register
+    ├── /auth/forgot-password      # Password reset
+    ├── /auth/404                  # 404 error
+    └── /auth/permissions          # Permission denied
+```
+
+## URL Patterns
+
+The application uses Spanish URL paths with consistent naming:
+
+<AccordionGroup>
+  <Accordion title="List Pages">
+    `/resource-name` (e.g., `/usuarios-staff`, `/eventos`)
+  </Accordion>
+  
+  <Accordion title="Detail Pages">
+    `/resource-name-detalle` or `/usuarios-detalle-type`
+  </Accordion>
+  
+  <Accordion title="Create Pages">
+    `/resource-name-crear` or `/create-resource-name`
+  </Accordion>
+  
+  <Accordion title="Edit Pages">
+    `/resource-name-editar` or `/edit-resource-name`
+  </Accordion>
+  
+  <Accordion title="Configuration Pages">
+    `/resource-name-config` or `/resource-name-config-type`
+  </Accordion>
+</AccordionGroup>
+
+## Complete Route List
+
+Here's a comprehensive list of all available routes:
+
+### User Management (30+ routes)
+- Staff, Clients, Collaborators, Customers lists
+- User detail pages
+- Create/Edit user forms
+
+### Event Management (20+ routes)
+- Event venues and events lists
+- Event configuration and setup
+- Credentials and notifications
+- Orders and tickets
+
+### Transaction Management (10+ routes)
+- Transactions, orders, payouts
+- Payment methods
+- Custody accounts
+
+### Office Management (8+ routes)
+- Office list and details
+- Office events and transactions
+- Office collaborators and settings
+
+### System Management
+- Contracts and addendums
+- Documents and conciliations
+- Marketing campaigns
+- Platform settings
+
+## Best Practices
+
+<Steps>
+  <Step title="Use Permission Guards">
+    Always wrap protected routes in PermissionGuard
+  </Step>
+  <Step title="Lazy Load Components">
+    Use React.lazy() for all route components
+  </Step>
+  <Step title="Pass State Carefully">
+    Don't store sensitive data in navigation state
+  </Step>
+  <Step title="Handle 404s">
+    Implement catch-all routes for undefined paths
+  </Step>
+  <Step title="Use Replace for Redirects">
+    Use `replace: true` option for redirects to avoid back button issues
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Guards" href="/architecture/guards" icon="lock">
+    Learn about authentication and permission guards
+  </Card>
+  <Card title="State Management" href="/architecture/state-management" icon="database">
+    Understand Redux store structure
+  </Card>
+  <Card title="Layouts" href="/components/layouts" icon="table-layout">
+    Explore layout components
+  </Card>
+  <Card title="Navigation" href="/components/navigation" icon="bars">
+    Build navigation menus
+  </Card>
+</CardGroup>

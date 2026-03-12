@@ -1,0 +1,352 @@
+---
+title: Platform Settings
+description: Configure platform-wide settings including exchange rates, costs, and financial parameters
+---
+
+Platform Settings provide centralized control over system-wide configurations that affect all offices, portals, and transactions. These settings ensure consistent financial calculations and operational parameters across the entire TMT platform.
+
+## Settings Overview
+
+The Platform Settings page is organized into four main tabs:
+
+1. **General**: Platform-wide configurations (work in progress)
+2. **Exchange Rate**: Daily currency exchange rates
+3. **Fixed Costs**: Flat-rate operational expenses
+4. **Variable Costs**: Percentage-based service fees
+
+## Exchange Rate Management
+
+The exchange rate system tracks the daily conversion rate between Bolivares (Bs.) and US Dollars (USD).
+
+### Viewing Current Rate
+
+The Exchange Rate tab displays:
+
+- **Current Rate**: Exchange rate in Bolivares per Dollar
+- **Last Update**: Timestamp of the most recent rate update
+- **Rate History Chart**: Visual representation of recent rate trends
+
+### Data Source
+
+Exchange rates are stored in Firestore:
+
+```javascript
+// Collection: data
+// Document: exchange_rates
+{
+  rates: {
+    usd: 36.5000  // Current rate in Bs.
+  },
+  date: {
+    last_update: Timestamp
+  }
+}
+```
+
+### Refreshing Exchange Rates
+
+Click the refresh icon to reload the latest exchange rate from the database.
+
+<Note>
+  Exchange rates are typically updated daily and affect all financial calculations in the system.
+</Note>
+
+## Fixed Costs Configuration
+
+Fixed costs are flat-rate expenses applied to events or transactions regardless of the total amount.
+
+### Managing Fixed Costs
+
+The Fixed Costs tab provides:
+
+- View all configured fixed cost items
+- Add new fixed cost entries
+- Edit existing cost amounts
+- Track which account is responsible for each cost
+
+### Fixed Cost Structure
+
+Each fixed cost entry includes:
+
+```javascript
+{
+  name: "Service Name",
+  amount: 50.00,      // Fixed dollar amount
+  account: "TMT" | "Cliente"  // Who pays this cost
+}
+```
+
+### Example Fixed Costs
+
+- Event setup fee: $100 (TMT)
+- Insurance coverage: $75 (Cliente)
+- Security deposit: $200 (Cliente)
+- Platform fee: $50 (TMT)
+
+## Variable Costs Configuration
+
+Variable costs are percentage-based fees calculated on transaction amounts.
+
+### Viewing Variable Costs
+
+The Variable Costs tab displays a table with:
+
+- Service name
+- Percentage rate
+- Account responsible for payment
+- Edit and delete actions
+
+### Adding New Variable Cost
+
+<Steps>
+  <Step title="Access Variable Costs Tab">
+    Navigate to Platform Settings and select the "Gastos Variables" tab.
+  </Step>
+  
+  <Step title="Enter Service Details">
+    Fill in the form at the top of the page:
+    
+    - **Service Name**: Descriptive name for the cost (e.g., "Payment Processing")
+    - **Percentage**: Rate between 0-100% (e.g., 2.5 for 2.5%)
+    - **Account**: Select "TMT" or "Cliente" to specify who pays
+  </Step>
+  
+  <Step title="Validate Total Percentage">
+    The system validates that the sum of all percentages does not exceed 100%.
+    
+    <Warning>
+      If adding a new percentage would exceed 100%, the system will reject the addition with an error message.
+    </Warning>
+  </Step>
+  
+  <Step title="Save Variable Cost">
+    Click "Añadir" (Add) to save the new variable cost.
+    
+    The cost is immediately added to the `event_setup_financial` data:
+    
+    ```javascript
+    // Collection: data
+    // Document: event_setup_financial
+    {
+      data: [
+        {
+          name: "Payment Processing",
+          percentage: 2.5,
+          account: "TMT"
+        },
+        // ... other costs
+      ]
+    }
+    ```
+  </Step>
+</Steps>
+
+### Editing Variable Costs
+
+<Steps>
+  <Step title="Enable Edit Mode">
+    Click the edit icon (pencil) on the row you want to modify.
+  </Step>
+  
+  <Step title="Update Values">
+    The row becomes editable. Modify:
+    - Service name (text field)
+    - Percentage (number input)
+    - Account (dropdown: TMT or Cliente)
+  </Step>
+  
+  <Step title="Save or Cancel">
+    - Click the checkmark to save changes
+    - Click the X to cancel and revert
+    
+    <Note>
+      The system validates that the total percentage remains under 100% before saving.
+    </Note>
+  </Step>
+</Steps>
+
+### Variable Cost Structure
+
+Each variable cost is stored as:
+
+```javascript
+{
+  name: "Service Name",
+  percentage: 2.5,    // Percentage rate (e.g., 2.5%)
+  account: "TMT" | "Cliente"  // Responsible party
+}
+```
+
+### Example Variable Costs
+
+- Payment processing: 2.5% (TMT)
+- Platform commission: 5% (TMT)
+- Service fee: 3% (Cliente)
+- Transaction fee: 1.5% (TMT)
+
+Total: 12% (within the 100% limit)
+
+## Financial Calculations
+
+Variable costs are applied to transactions as follows:
+
+```javascript
+// Example calculation
+const ticketPrice = 100.00;
+const totalPercentage = 12; // Sum of all variable costs
+
+const variableCosts = ticketPrice * (totalPercentage / 100);
+// variableCosts = $12.00
+
+const finalPrice = ticketPrice + variableCosts;
+// finalPrice = $112.00
+```
+
+## Account Types
+
+Costs can be assigned to two account types:
+
+### TMT Account
+- Costs paid by TradeMaster Transactions
+- Typically operational and infrastructure costs
+- Examples: Platform fees, processing fees
+
+### Cliente Account
+- Costs paid by the client/producer
+- Event-specific or service-related costs
+- Examples: Service fees, commission charges
+
+## Cost Management Best Practices
+
+1. **Regular Review**: Audit costs monthly to ensure accuracy
+2. **Clear Naming**: Use descriptive names for all cost entries
+3. **Percentage Limits**: Keep total variable costs reasonable (typically 10-20%)
+4. **Account Clarity**: Clearly document which party pays each cost
+5. **Cost Justification**: Maintain records explaining each cost item
+
+## Data Table Features
+
+The variable costs table includes:
+
+### Sorting
+- Click column headers to sort by name, percentage, or account
+- Toggle between ascending and descending order
+
+### Pagination
+- View 10, 15, or 20 items per page
+- Navigate with first, previous, next, last page controls
+- Shows current range (e.g., "Del 1 al 10 de 25")
+
+### Inline Editing
+- Edit values directly in the table
+- Real-time validation
+- Save or cancel individual row changes
+
+### Search and Filter
+- Filter by service name
+- Filter by account type
+- Search across all fields
+
+## Percentage Validation
+
+The system enforces a strict 100% limit on total variable costs:
+
+```javascript
+// Validation logic
+const currentTotal = costs.reduce((sum, cost) => sum + cost.percentage, 0);
+const newTotal = currentTotal + newPercentage;
+
+if (newTotal > 100) {
+  throw new Error('Total percentage cannot exceed 100%');
+}
+```
+
+<Warning>
+  If you need to add a cost that would exceed 100%, you must first reduce or remove existing costs.
+</Warning>
+
+## General Settings Tab
+
+The General Settings tab is currently under development and will include:
+
+- Platform name and branding
+- Default language settings
+- Timezone configuration
+- Email notification settings
+- System-wide defaults
+
+<Note>
+  Check back for updates as additional general settings become available.
+</Note>
+
+## Data Persistence
+
+All settings are stored in the Firestore `data` collection:
+
+```
+data/
+  ├── exchange_rates
+  │   └── { rates, date }
+  ├── event_setup_financial
+  │   └── { data: [variable costs] }
+  └── costs_fixed
+      └── { data: [fixed costs] }
+```
+
+### Backup and Recovery
+
+- Settings are automatically backed up with Firestore backups
+- Changes are logged with timestamps
+- Previous values can be recovered from backup snapshots
+
+## Access Control
+
+<Warning>
+  Platform settings should only be modified by administrators with appropriate permissions. Changes affect all users and transactions system-wide.
+</Warning>
+
+Recommended access levels:
+
+- **View Only**: All administrators
+- **Edit Exchange Rates**: Finance team
+- **Edit Costs**: Senior administrators only
+
+## Troubleshooting
+
+### Cannot Add Variable Cost
+
+**Error**: "La suma de los porcentajes no puede superar el 100%"
+
+- Calculate current total percentage
+- Remove or reduce existing costs
+- Add new cost with adjusted percentage
+
+### Exchange Rate Not Updating
+
+- Check internet connection
+- Verify Firestore permissions
+- Ensure `exchange_rates` document exists
+- Try refreshing the page
+
+### Table Not Loading
+
+- Clear browser cache
+- Check console for errors
+- Verify Firestore connection
+- Ensure `event_setup_financial` document exists
+
+### Edit Mode Not Saving
+
+- Verify total percentage is under 100%
+- Check that all required fields are filled
+- Ensure valid data types (numbers for percentages)
+- Look for validation error messages
+
+## Integration with Other Systems
+
+Platform settings integrate with:
+
+- **Ticket Sales**: Variable costs applied to each transaction
+- **Financial Reports**: Exchange rates used for currency conversion
+- **Event Setup**: Fixed costs included in event cost calculations
+- **Payment Processing**: Fees calculated based on variable percentages

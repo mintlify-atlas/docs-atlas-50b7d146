@@ -1,0 +1,539 @@
+---
+title: 'Event Setup'
+description: 'Configure event zones, seating arrangements, and pricing for your events'
+---
+
+# Event Setup
+
+After creating an event, you need to configure zones, seating, and pricing. This guide covers both manual zone configuration and Seats.io integration for advanced seating management.
+
+## Overview
+
+Event setup is the critical phase where you define:
+
+- **Zones** - Different areas or sections of the venue
+- **Pricing** - Base prices and corporate pricing per zone
+- **Seating capacity** - Number of seats available in each zone
+- **Zone properties** - Public/private status, colors, descriptions
+- **Seating splits** - Revenue distribution between parties
+
+<Warning>
+Once tickets are generated from your zone configuration, prices can only be modified through the price editing interface. Zone structure changes require regenerating all tickets.
+</Warning>
+
+## Accessing Event Setup
+
+Navigate to **Events** → Select your event → **Configuración** → **Zonas**
+
+## Zone Configuration
+
+<Steps>
+
+### Step 1: Open Setup Form
+
+From the event details page, click **Configurar Zonas** to access the zone setup interface.
+
+### Step 2: Choose Configuration Method
+
+You have two options:
+
+**Manual Zone Creation**
+- Create zones manually by entering details
+- Suitable for general admission events
+- Full control over zone structure
+
+**Import from Seats.io** (if venue has seating map)
+- Automatically import sections from Seats.io
+- Preserves seat counts and layout
+- Faster setup for mapped venues
+
+### Step 3: Add Zones Manually
+
+Click **+ Agregar Zona** to create a new zone:
+
+```jsx
+<Grid container spacing={3}>
+  <Grid item xs={12} sm={6}>
+    <CustomTextField
+      id="name"
+      label="Nombre de Zona"
+      placeholder="Ej: Zona VIP"
+      fullWidth
+    />
+  </Grid>
+  
+  <Grid item xs={12} sm={6}>
+    <CustomTextField
+      id="seats"
+      label="Cantidad de Asientos"
+      type="number"
+      fullWidth
+    />
+  </Grid>
+  
+  <Grid item xs={12} sm={6}>
+    <CustomTextField
+      id="price"
+      label="Precio"
+      type="number"
+      fullWidth
+    />
+  </Grid>
+  
+  <Grid item xs={12} sm={6}>
+    <CustomTextField
+      id="corporate_price"
+      label="Precio Corporativo"
+      type="number"
+      fullWidth
+    />
+  </Grid>
+</Grid>
+```
+
+**Zone Fields:**
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Nombre | Zone name displayed to customers | Yes |
+| Tipo | Zone type (VIP, General, etc.) | Yes |
+| Descripción | Detailed zone description | Yes |
+| Asientos | Total seat capacity | Yes |
+| Precio | Base ticket price | Yes |
+| Precio Corporativo | Corporate/group pricing | Optional |
+| Color | Zone color for visual identification | Yes |
+| Público | Public or private access | Yes |
+| Estatus | Active or inactive | Yes |
+| Imagen | Optional zone image | No |
+
+### Step 4: Configure Zone Properties
+
+**Zone Type Selection:**
+
+```jsx
+<CustomSelect
+  id="type"
+  value={formik.values.type}
+  onChange={(e) => setFieldValue('type', e.target.value)}
+>
+  {zoneType.map((option) => (
+    <MenuItem key={option} value={option}>
+      {option}
+    </MenuItem>
+  ))}
+</CustomSelect>
+```
+
+Common zone types:
+- VIP
+- Preferente
+- General
+- Palco
+- Platea
+
+**Zone Color Picker:**
+
+Select a color for zone identification:
+
+```jsx
+<TwitterPicker
+  color={color}
+  onChangeComplete={(color) => setColor(color.hex)}
+  triangle="hide"
+/>
+```
+
+Colors help users identify zones on seating charts and in the ticket selection interface.
+
+**Public/Private Status:**
+
+- **Público** - Available to all customers during ticket sales
+- **Privado** - Restricted access, requires special credentials or invitations
+
+### Step 5: Import from Seats.io (Optional)
+
+If your venue has a Seats.io map, click **Importar desde Seats.io** to automatically create zones:
+
+```javascript
+// System automatically links zones to Seats.io sections
+const linkedRows = await autoLinkToSeatsio(rows);
+
+for (const row of linkedRows) {
+  const tempDataZone = {
+    description: row.description,
+    name: row.name,
+    price: row.price,
+    corporate_price: row.corporate_price || row.price,
+    seats: row.seats,
+    seatsio_linked: row.seatsio_linked || null,
+    // Additional zone properties
+  };
+}
+```
+
+The importer:
+- Fetches sections from the Seats.io chart
+- Calculates seat counts per section
+- Links zones to chart categories
+- Preserves seating layout information
+
+<Warning>
+Seats.io integration requires that your venue's chart is published and has no validation errors.
+</Warning>
+
+### Step 6: Edit Existing Zones
+
+Use the inline editing feature in the zone table:
+
+```jsx
+<DataTable
+  value={rows}
+  editMode="row"
+  onRowEditComplete={onRowEditComplete}
+>
+  <Column field="name" header="Nombre" editor={textEditor} />
+  <Column field="seats" header="Asientos" editor={numberEditor} />
+  <Column field="price" header="Precio" editor={numberEditor} />
+  <Column field="public" header="Público" editor={statusPublicEditor} />
+  <Column field="status" header="Estatus" editor={statusZoneEditor} />
+  <Column rowEditor headerStyle={{ width: '10%' }} />
+</DataTable>
+```
+
+Click the edit icon on any row to modify zone details.
+
+### Step 7: Save Zone Configuration
+
+Click **Guardar Configuración** to save zones. The system will:
+
+1. Validate all zone data
+2. Upload zone images (if provided)
+3. Create zone documents in Firebase
+4. Link zones to Seats.io (if applicable)
+5. Update event status to show setup completion
+
+</Steps>
+
+## Seating Splits Configuration
+
+Define how revenue is distributed between parties:
+
+### Accessing Splits Setup
+
+Navigate to **Event Details** → **Configuración** → **Reparticiones**
+
+### Creating Split Rules
+
+```javascript
+// Example split configuration
+const splitData = {
+  event_id: eventId,
+  splits: [
+    {
+      party_name: "Productor",
+      percentage: 70,
+      fixed_amount: 0,
+      zones: ["zone_1", "zone_2"] // Optional zone-specific split
+    },
+    {
+      party_name: "Venue",
+      percentage: 20,
+      fixed_amount: 0
+    },
+    {
+      party_name: "Plataforma",
+      percentage: 10,
+      fixed_amount: 500 // Fixed fee plus percentage
+    }
+  ]
+}
+```
+
+**Split Types:**
+
+- **Percentage-based** - Share of ticket revenue
+- **Fixed amount** - Flat fee per ticket or per event
+- **Hybrid** - Combination of fixed and percentage
+- **Zone-specific** - Different splits for different zones
+
+## Zone Management After Creation
+
+### Editing Zone Prices
+
+After tickets are generated, use the dedicated price editing interface:
+
+```jsx
+<Button
+  variant="contained"
+  color="success"
+  onClick={handleOpenPriceEdit}
+  startIcon={<IconCurrencyDollar />}
+>
+  Editar Precios
+</Button>
+```
+
+This opens a modal where you can update:
+- Base price per zone
+- Corporate price per zone
+
+<Warning>
+Price changes do NOT affect tickets that have already been sold. Only unsold tickets will reflect the new pricing.
+</Warning>
+
+### Viewing Zone Configuration
+
+The zone list displays:
+
+```jsx
+<DataTable value={zones}>
+  <Column field="id" header="ID" />
+  <Column field="name" header="Nombre" />
+  <Column field="seatsio_linked" header="Mapa" body={SeatsioLinkTemplate} />
+  <Column field="price" header="Precio" />
+  <Column field="corporate_price" header="Precio Corporativo" />
+  <Column field="public" header="Público" body={PublicChip} />
+  <Column field="seats" header="Asientos" />
+  <Column field="color" header="Color" body={ColorTemplate} />
+  <Column field="status" header="Estatus" body={StatusChip} />
+</DataTable>
+```
+
+### Seats.io Integration Indicators
+
+Zones linked to Seats.io show:
+- 🗺️ Map icon
+- Section or category name from Seats.io
+- "Premium" badge indicating advanced features
+
+## Generating Tickets
+
+Once zones are configured and confirmed:
+
+<Steps>
+
+### Step 1: Confirm Zone Setup
+
+Review all zones and verify:
+- Seat counts are correct
+- Prices are accurate
+- All zones are active
+- Public/private settings are correct
+
+### Step 2: Click Generate Tickets
+
+```jsx
+<Button
+  disabled={!zonesConfirmed || existsTickets}
+  variant="contained"
+  color="primary"
+  onClick={handleOpen}
+>
+  Generar Tickets
+</Button>
+```
+
+Button states:
+- **Enabled** - Zones confirmed, no tickets exist
+- **Disabled** - Zones not confirmed OR tickets already generated
+
+### Step 3: Confirm Generation
+
+A confirmation dialog appears:
+
+```jsx
+<Modal open={open}>
+  <Box>
+    <h2>Crear Tickets</h2>
+    <p>¿Esta Seguro que quiere generar los Tickets con esta configuración?</p>
+    <Button onClick={ticketsGenerate}>Generar</Button>
+    <Button onClick={() => setOpen(false)}>Cancelar</Button>
+  </Box>
+</Modal>
+```
+
+### Step 4: Ticket Generation Process
+
+The system calls the `tickets_generate` cloud function:
+
+```javascript
+const response = await tickets_generate({ idevent: id });
+
+if (response.data.valido) {
+  // Tickets created successfully
+  // Navigate to ticket management
+  navigate(`/tickets?id=${id}`);
+}
+```
+
+This creates individual ticket documents for each seat in each zone.
+
+</Steps>
+
+## Financial Adjustments
+
+Configure additional costs and fees:
+
+### Platform Fees
+
+```jsx
+<CustomTextField
+  label="Cargo por Servicio"
+  type="number"
+  helperText="Porcentaje de cargo por servicio de la plataforma"
+/>
+```
+
+### Processing Fees
+
+```jsx
+<CustomTextField
+  label="Cargo por Procesamiento"
+  type="number"
+  helperText="Cargo fijo por procesamiento de pago"
+/>
+```
+
+These fees are added to ticket prices during checkout.
+
+## Common Configuration Patterns
+
+### Simple General Admission Event
+
+```javascript
+const zones = [
+  {
+    name: "General",
+    type: "General",
+    seats: 500,
+    price: 50,
+    public: true,
+    status: true,
+    color: "#3498db"
+  }
+];
+```
+
+### Multi-Zone Reserved Seating
+
+```javascript
+const zones = [
+  {
+    name: "VIP",
+    type: "VIP",
+    seats: 100,
+    price: 200,
+    corporate_price: 180,
+    public: true,
+    status: true,
+    color: "#e74c3c",
+    seatsio_linked: { section: "VIP-A", auto_linked: true }
+  },
+  {
+    name: "Preferente",
+    type: "Preferente",
+    seats: 300,
+    price: 100,
+    corporate_price: 90,
+    public: true,
+    status: true,
+    color: "#f39c12",
+    seatsio_linked: { section: "PREF-1", auto_linked: true }
+  },
+  {
+    name: "General",
+    type: "General",
+    seats: 500,
+    price: 50,
+    public: true,
+    status: true,
+    color: "#3498db",
+    seatsio_linked: { section: "GEN", auto_linked: true }
+  }
+];
+```
+
+### Private Corporate Event
+
+```javascript
+const zones = [
+  {
+    name: "Salón Principal",
+    type: "General",
+    seats: 200,
+    price: 0,
+    public: false, // Private event
+    status: true,
+    color: "#9b59b6"
+  }
+];
+```
+
+## Troubleshooting
+
+### Cannot Generate Tickets
+
+If the "Generar Tickets" button is disabled:
+
+1. **Check zone confirmation** - Zones must be marked as confirmed
+2. **Verify no tickets exist** - Tickets can only be generated once
+3. **Review zone validation** - All required zone fields must be completed
+4. **Check total capacity** - Total seats must not exceed venue capacity
+
+### Seats.io Import Fails
+
+<Warning>
+If importing from Seats.io fails, check:
+- Chart is published in Seats.io
+- Chart has no validation errors
+- Venue is correctly linked to chart
+- Seats.io API credentials are valid
+</Warning>
+
+### Price Changes Not Reflecting
+
+If price updates aren't visible:
+
+1. Use the dedicated **Editar Precios** button (not inline editing after tickets exist)
+2. Clear browser cache and refresh
+3. Verify you're viewing unsold tickets
+4. Check that changes were saved successfully
+
+## Best Practices
+
+### Zone Naming
+
+- Use clear, descriptive names ("VIP Front", "Balcony Left")
+- Include section identifiers for large venues
+- Keep names consistent with venue signage
+
+### Pricing Strategy
+
+- Set corporate prices 5-15% below public prices
+- Consider early bird discounts via promotional codes
+- Price higher zones significantly higher to drive value perception
+- Round to convenient amounts (50, 100, 150 vs. 53, 97, 148)
+
+### Capacity Planning
+
+- Leave 5-10% buffer for VIP/comp tickets
+- Account for wheelchair-accessible seating requirements
+- Consider sightline and obstructed view seats
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Credentials" icon="id-badge" href="/guides/events/credentials">
+    Set up event access credentials
+  </Card>
+  <Card title="Orders Management" icon="shopping-cart" href="/guides/events/orders">
+    Manage ticket orders and sales
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+- [Creating Events](/guides/events/creating-events)
+- [Event Credentials](/guides/events/credentials)
+- [Venue Management](/features/venue-management)
+- [Financial Operations](/features/financial-operations)

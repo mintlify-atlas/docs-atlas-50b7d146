@@ -1,0 +1,267 @@
+---
+title: Processing Payouts
+description: Configure and manage payout accounts for fund disbursement
+---
+
+# Processing Payouts
+
+Payout accounts in TMT define the bank accounts and payment methods used to disburse funds to event organizers, vendors, and other beneficiaries.
+
+## Overview
+
+Payout methods are stored in the `payout_methods/tmt/methods` Firestore collection path and configure:
+
+- Beneficiary account details
+- Payment method type (digital, cash, check)
+- Currency and country information
+- Bank account metadata
+- Status and creation timestamps
+
+## Payout Account Structure
+
+```javascript
+{
+  name: string,              // Payout account name
+  type: string,              // Payment type (digital, cash, check)
+  currency: Object,          // Currency object with id and name
+  country: string,           // Country code
+  method: string,            // Payment method name
+  data: Object,              // Method-specific metadata
+  status: boolean,           // Active/inactive status
+  date: {
+    created: Timestamp,      // Creation timestamp
+    updated: Timestamp       // Last update timestamp
+  }
+}
+```
+
+## Creating Payout Accounts
+
+<Steps>
+  <Step title="Navigate to Payout Accounts">
+    Access the payout accounts section and click "Añadir Cuenta de Pago" (Add Payout Account).
+    
+    Source: `src/views/payout/NewPayout.js`
+  </Step>
+
+  <Step title="Configure Basic Information">
+    Enter the required account details:
+    
+    **Name**: Descriptive name for the payout account
+    
+    ```javascript
+    // Validation from NewPayoutForm.js:49
+    namePayment: Yup.string().required('Nombre es requerido')
+    ```
+  </Step>
+
+  <Step title="Select Payment Type">
+    Choose from available payment types:
+    - Digital (bank transfers, mobile payments)
+    - Cash
+    - Check
+    
+    Source: `src/components/apps/payout/NewPayoutForm.js:217-236`
+  </Step>
+
+  <Step title="Select Currency">
+    Choose the currency for this payout account. Available currencies are loaded from the setup configuration.
+    
+    ```javascript
+    // From NewPayoutForm.js:36
+    const currencies = setup.Setup.currencies.data;
+    ```
+  </Step>
+
+  <Step title="Choose Payment Method">
+    Select the specific payment method based on type and currency. The method dropdown is filtered dynamically:
+    
+    ```javascript
+    // From NewPayoutForm.js:125-145
+    const selectedValues = payment_data.filter(x => 
+      x.type === paymentTypes.find(e => e.name === payment_type).type && 
+      x.currency === currency.id
+    );
+    ```
+  </Step>
+
+  <Step title="Enter Method-Specific Data">
+    Fill in the required fields based on the selected payment method:
+    
+    - **Bank accounts**: Bank name, account number, routing information
+    - **Mobile payments**: Phone number, provider account ID
+    - **Email payments**: Email address, account name
+    - **Document ID**: ID type and number for verification
+    
+    Implementation: `src/components/apps/payout/NewPayoutForm.js:325-332`
+  </Step>
+
+  <Step title="Save Payout Account">
+    Submit the form to create the payout account:
+    
+    ```javascript
+    // From NewPayoutForm.js:79-96
+    let toSend = {
+      currency: values.currency,
+      country: values.Method.country,
+      data: metadata,
+      date: {
+        created: firebase.firestore.FieldValue.serverTimestamp(),
+        updated: ''
+      },
+      method: values.Method.name,
+      name: values.namePayment,
+      status: true,
+      type: values.payment_type
+    };
+    
+    await Firestore.collection('payout_methods')
+      .doc('tmt')
+      .collection('methods')
+      .add(toSend);
+    ```
+  </Step>
+</Steps>
+
+## Payment Method Types
+
+### Digital Payments
+
+Digital payment methods require specific data fields:
+
+- **Bank Transfers**: Bank name, account number, account type
+- **Mobile Wallets**: Phone number, wallet provider
+- **Online Payment Services**: Email, account ID
+
+The system dynamically loads available banks based on country:
+
+```javascript
+// From NewPayoutForm.js:156-168
+if (field.value === 'bank') {
+  return {
+    ...item,
+    data: banks[selectedValues.country]
+  };
+}
+```
+
+### Cash Payments
+
+Cash payout methods typically require:
+- Recipient name
+- ID document type and number
+- Collection location
+
+### Check Payments
+
+Check payout methods need:
+- Payee name
+- Mailing address
+- ID verification
+
+## Editing Payout Accounts
+
+<Steps>
+  <Step title="Access Account Details">
+    Navigate to the payout list and select the account to edit.
+    
+    Source: `src/views/payout/EditPayout.js`
+  </Step>
+
+  <Step title="Update Information">
+    Modify the necessary fields. Note that changing payment type or currency may require re-entering method-specific data.
+  </Step>
+
+  <Step title="Save Changes">
+    Submit the updated information. The system updates the timestamp:
+    
+    ```javascript
+    date: {
+      created: originalTimestamp,
+      updated: firebase.firestore.FieldValue.serverTimestamp()
+    }
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Editing a payout account that has pending disbursements may affect payment processing. Verify all pending payments before making changes.
+</Warning>
+
+## Viewing Payout Details
+
+Access complete payout account information:
+
+```javascript
+// From DisplayPayout.js:20-35
+const DisplayPaymentMethod = () => {
+  return (
+    <PageContainer title="Detalles de Cuenta de Pago">
+      <ParentCard title='Detalles de Cuenta de Pago'>
+        <PayoutDetail />
+      </ParentCard>
+    </PageContainer>
+  );
+};
+```
+
+The detail view shows:
+- Account name and status
+- Payment type and method
+- Currency and country
+- All method-specific metadata
+- Creation and update timestamps
+
+## Managing Account Status
+
+Payout accounts can be activated or deactivated:
+
+- **Active** (`status: true`): Available for disbursements
+- **Inactive** (`status: false`): Hidden from payout options
+
+<Warning>
+  Deactivating a payout account does not delete historical transaction records. Reactivate the account if needed for future payments.
+</Warning>
+
+## Document Verification
+
+For payout accounts requiring ID verification:
+
+```javascript
+// From NewPayoutForm.js:170-176
+const updatedSelectedValuesData = selectedValuesData.map((field) => {
+  if (field.value === 'id_number') {
+    return { ...field, type: 'id_document' };
+  }
+  return field;
+});
+```
+
+Valid document types include:
+- National ID
+- Passport
+- Tax ID
+- Driver's License
+
+## Integration with Payment Methods
+
+Payout accounts complement payment methods:
+
+- **Payment Methods**: How customers pay (inbound)
+- **Payout Accounts**: Where funds are disbursed (outbound)
+
+Both use similar data structures but serve different purposes in the financial flow.
+
+## Best Practices
+
+1. **Descriptive Names**: Use clear, identifiable names for payout accounts
+2. **Verify Bank Details**: Double-check account numbers and routing information
+3. **Keep Active**: Only keep currently used payout accounts active
+4. **Regular Audits**: Periodically review payout accounts for accuracy
+5. **Document Updates**: Note reasons for changes in external records
+
+## Related Sections
+
+- [Payment Methods](/guides/financial/payment-methods) - Configure customer payment options
+- [Custody Accounts](/guides/financial/custody-accounts) - Manage intermediate holding accounts
+- [Conciliations](/guides/financial/conciliations) - Reconcile payout disbursements

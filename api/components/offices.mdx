@@ -1,0 +1,497 @@
+---
+title: "Office Components"
+description: "React components for office and ticket booth management"
+icon: "building"
+---
+
+## Overview
+
+Office components manage ticket booths, physical sales locations, and their associated operations. These components are located in `src/components/apps/offices/`.
+
+## OfficesTable
+
+Displays a paginated, sortable table of all offices/ticket booths in the system.
+
+**Location:** `src/components/apps/offices/OfficesTable.js:24`
+
+### Features
+
+- **Global Search** - Search by office name, client, or type
+- **Sortable Columns** - Click headers to sort data
+- **Status Filtering** - Filter by active/inactive status
+- **Pagination** - 10, 15, or 20 rows per page
+- **CSV Export** - Download office data
+- **Create Office** - Button to add new ticket booths
+
+### Data Fields
+
+The table displays:
+
+| Column | Field | Description |
+|--------|-------|-------------|
+| Nombre | `name` | Office/ticket booth name |
+| Cliente | `client.name` | Associated client name |
+| Tipo | `office_type` | Office type classification |
+| Estatus | `status` | Active/Inactive badge |
+| Acciones | - | View details button |
+
+### Usage Example
+
+```jsx
+import OfficesTable from 'src/components/apps/offices/OfficesTable';
+
+function OfficesPage() {
+  return (
+    <div>
+      <Typography variant="h4">Ticket Booths</Typography>
+      <OfficesTable />
+    </div>
+  );
+}
+```
+
+### Redux Integration
+
+Connects to the offices Redux store:
+
+```jsx
+import { fetchOffices, setSelectedOffice } from 'src/store/apps/offices/OfficesSlice';
+
+// Fetch on mount
+React.useEffect(() => {
+  dispatch(fetchOffices());
+}, [dispatch]);
+
+// Select from store
+const offices = useSelector((state) => state.offices.Offices);
+```
+
+### Status Transformation
+
+The component transforms boolean status to string for display:
+
+```jsx
+setRows((getOffices ?? []).map((e) => {
+  return {
+    ...e,
+    status: e.status ? "Activo" : "Inactivo"
+  }
+}));
+```
+
+## NewOfficeForm
+
+Comprehensive form for creating new offices/ticket booths with location, staff, and payment method configuration.
+
+**Location:** `src/components/apps/offices/NewOfficeForm.js:25`
+
+### Form Sections
+
+#### 1. Basic Information
+
+<ParamField path="name" type="string" required>
+  Office/ticket booth name
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Office type from setup configuration (e.g., "Taquilla", "Punto de Venta")
+</ParamField>
+
+<ParamField path="client" type="string" required>
+  Associated client ID (can be "TMT" for TradeMaster-owned offices)
+</ParamField>
+
+#### 2. Location Information
+
+<ParamField path="country" type="object" required>
+  Country object from locations setup data
+</ParamField>
+
+<ParamField path="city" type="string" required>
+  City name
+</ParamField>
+
+<ParamField path="zipcode" type="string" required>
+  Postal/ZIP code
+</ParamField>
+
+<ParamField path="line" type="string" required>
+  Street address line
+</ParamField>
+
+#### 3. Contact Information
+
+<ParamField path="phone" type="string" optional>
+  Primary contact phone number
+</ParamField>
+
+<ParamField path="phone2" type="string" optional>
+  Secondary contact phone number
+</ParamField>
+
+#### 4. Staff Assignment
+
+<ParamField path="collaborators" type="array" required>
+  Array of collaborator IDs assigned to this office
+</ParamField>
+
+<ParamField path="administrators" type="array" required>
+  Array of administrator IDs who manage this office
+</ParamField>
+
+#### 5. Payment Methods
+
+<ParamField path="payments_methods" type="array" required>
+  Array of enabled payment method IDs for this office
+</ParamField>
+
+#### 6. Operating Hours
+
+<ParamField path="activeDays" type="object" required>
+  Object mapping day names to boolean active status:
+  ```typescript
+  {
+    monday: boolean;
+    tuesday: boolean;
+    wednesday: boolean;
+    thursday: boolean;
+    friday: boolean;
+    saturday: boolean;
+    sunday: boolean;
+  }
+  ```
+</ParamField>
+
+<ParamField path="start_time" type="Time" optional>
+  Office opening time (if operating hours apply)
+</ParamField>
+
+<ParamField path="end_time" type="Time" optional>
+  Office closing time (if operating hours apply)
+</ParamField>
+
+### Validation Schema
+
+The form uses Yup validation:
+
+```javascript
+Yup.object().shape({
+  name: Yup.string().required('Campo requerido'),
+  type: Yup.string().required('Campo requerido'),
+  country: Yup.object().required('Campo es requerido'),
+  client: Yup.string().required('El cliente es requerido'),
+  city: Yup.string().required('Campo requerido'),
+  zipcode: Yup.string().required('Campo requerido'),
+  line: Yup.string().required('Campo requerido'),
+  payments_methods: Yup.array().required('Campo requerido'),
+  collaborators: Yup.array().required('Campo requerido'),
+  administrators: Yup.array().required('Campo requerido'),
+})
+```
+
+### Usage Example
+
+```jsx
+import NewOfficeForm from 'src/components/apps/offices/NewOfficeForm';
+
+function CreateOfficePage() {
+  return (
+    <BlankCard>
+      <CardContent>
+        <Typography variant="h4">Create Ticket Booth</Typography>
+        <NewOfficeForm />
+      </CardContent>
+    </BlankCard>
+  );
+}
+```
+
+### Portal Integration
+
+The form can optionally link the office to a portal:
+
+```jsx
+// Fetch available portals
+const searchPortals = async () => {
+  const querySnapshot = await Firestore
+    .collection('portals')
+    .where("status", "==", true)
+    .get();
+  
+  const portalsData = querySnapshot.docs.map((doc) => ({
+    name: doc.data().portal_name,
+    url: doc.data().url,
+    id: doc.id
+  }));
+  
+  setPortals(portalsData);
+};
+```
+
+## ActiveOfficesTable
+
+Filtered table showing only active offices.
+
+**Location:** `src/components/apps/offices/ActiveOfficesTable.js`
+
+### Features
+
+- Displays offices where `status === true`
+- Same table features as OfficesTable
+- Optimized for operational dashboards
+
+## Office Detail Components
+
+Located in `src/components/apps/offices/active-offices-settings/`:
+
+### ActiveOfficeDetail
+
+Detailed view of a specific office.
+
+**Location:** `src/components/apps/offices/ActiveOfficeDetail.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID to display
+</ParamField>
+
+**Sections:**
+- Basic information and location
+- Contact details
+- Operating hours
+- Assigned staff
+- Payment methods
+- Recent activity
+
+### ActiveOfficeCollaboratorsList
+
+Table of collaborators assigned to a specific office.
+
+**Location:** `src/components/apps/offices/ActiveOfficeCollaboratorsList.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID to filter collaborators
+</ParamField>
+
+**Features:**
+- View assigned collaborators
+- Add/remove collaborators
+- View collaborator schedules
+- Check attendance status
+
+### ActiveOfficeTicketsOfflineList
+
+Manages offline ticket sales for an office.
+
+**Location:** `src/components/apps/offices/ActiveOfficeTicketsOfflineList.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID for ticket sales
+</ParamField>
+
+**Features:**
+- View offline ticket inventory
+- Process manual ticket sales
+- Sync with online inventory
+- Generate sales reports
+
+## Office Events Components
+
+### ActiveOfficesEventTable
+
+Displays events associated with a specific office.
+
+**Location:** `src/components/apps/offices/ActiveOfficesEventTable.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID to filter events
+</ParamField>
+
+### ActiveEvents
+
+Shows currently active events for an office.
+
+**Location:** `src/components/apps/offices/ActiveEvents.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID
+</ParamField>
+
+## Office Financial Components
+
+### OfficesSalesTable
+
+Displays sales data for an office.
+
+**Location:** `src/components/apps/offices/OfficesSalesTable.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID for sales data
+</ParamField>
+
+**Features:**
+- Daily sales totals
+- Payment method breakdown
+- Ticket type sales
+- Revenue charts
+
+### TransactionsTable
+
+Detailed transaction history for an office.
+
+**Location:** `src/components/apps/offices/TransactionsTable.js`
+
+**Props:**
+
+<ParamField path="officeId" type="string" required>
+  Office ID for transactions
+</ParamField>
+
+**Displays:**
+- Transaction date and time
+- Payment method
+- Amount and currency
+- Ticket information
+- Customer details
+- Transaction status
+
+## OfficeTab
+
+Tabbed interface for office detail pages.
+
+**Location:** `src/components/apps/offices/OfficeTab.js`
+
+**Tabs:**
+- **Overview** - Office information and stats
+- **Events** - Associated events
+- **Sales** - Sales and revenue data
+- **Staff** - Assigned collaborators
+- **Transactions** - Transaction history
+- **Settings** - Configuration options
+
+## Common Patterns
+
+### Office Data Structure
+
+```typescript
+interface Office {
+  id: string;
+  name: string;
+  office_type: string;
+  status: boolean;
+  client: {
+    id: string;
+    name: string;
+  };
+  location: {
+    country: object;
+    city: string;
+    zipcode: string;
+    line: string;
+  };
+  contact: {
+    phone?: string;
+    phone2?: string;
+  };
+  hours: {
+    activeDays: Record<string, boolean>;
+    start_time?: Time;
+    end_time?: Time;
+  };
+  staff: {
+    collaborators: string[];
+    administrators: string[];
+  };
+  payments_methods: string[];
+  date: {
+    created: Timestamp;
+    updated: Timestamp;
+  };
+}
+```
+
+### Navigation Patterns
+
+```jsx
+const navigate = useNavigate();
+
+// Navigate to office detail
+navigate(`/detalles-taquilla?id=${officeId}`);
+
+// Navigate to create office
+navigate('/crear-taquilla');
+
+// Navigate to office sales
+navigate(`/taquilla-ventas?id=${officeId}`);
+```
+
+### Client Selection
+
+Offices can be owned by clients or by TradeMaster:
+
+```jsx
+const fetchClients = async () => {
+  const fireQuery = await Firestore.collection('u_clients').get();
+  const finalClients = [
+    { name: "TradeMaster Transactions", client_id: "TMT" },
+    ...fireQuery.docs.map((doc) => ({
+      name: doc.data().name,
+      client_id: doc.id
+    }))
+  ];
+  setClients(finalClients);
+};
+```
+
+## Styling
+
+Office components use consistent DataTable styling:
+
+```jsx
+const tableStyles = {
+  '& .p-datatable': {
+    borderRadius: '12px',
+    overflow: 'hidden',
+    boxShadow: 'none',
+    border: 'none',
+  },
+  '& .p-datatable-thead > tr > th': {
+    background: theme.palette.mode === 'dark' 
+      ? theme.palette.background.default 
+      : '#f5f7fa',
+    color: theme.palette.text.secondary,
+    padding: '12px 16px',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+  },
+  // ... additional styles
+};
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Offices Store" icon="database" href="/api/store/offices">
+    Redux store for office state management
+  </Card>
+  <Card title="User Components" icon="users" href="/api/components/users">
+    Collaborator management for offices
+  </Card>
+  <Card title="Event Components" icon="calendar" href="/api/components/events">
+    Events associated with offices
+  </Card>
+  <Card title="Office Management Guide" icon="book" href="/guides/admin/offices">
+    Step-by-step office management guides
+  </Card>
+</CardGroup>

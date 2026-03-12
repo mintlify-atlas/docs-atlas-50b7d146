@@ -1,0 +1,207 @@
+---
+title: "Components Overview"
+description: "React components architecture and organization in TradeMaster Transactions"
+icon: "cube"
+---
+
+## Component Architecture
+
+TradeMaster Transactions uses a modular React component architecture built with Material-UI (MUI) and PrimeReact for data tables. Components are organized by feature domain to maintain clear separation of concerns.
+
+## Directory Structure
+
+Components are organized in the following structure:
+
+```
+src/components/
+├── apps/                  # Feature-specific components
+│   ├── events/           # Event management components
+│   ├── users/            # User management components
+│   ├── offices/          # Office/ticket booth components
+│   ├── contracts/        # Contract components
+│   ├── portals/          # Portal components
+│   └── ...
+├── shared/               # Reusable UI components
+├── forms/                # Form elements and inputs
+│   └── theme-elements/  # Styled form components
+├── pages/                # Page-level components
+└── dashboards/           # Dashboard components
+```
+
+## Component Categories
+
+<CardGroup cols={3}>
+  <Card title="Event Components" icon="calendar" href="/api/components/events">
+    Tables, forms, and management interfaces for events
+  </Card>
+  <Card title="User Components" icon="users" href="/api/components/users">
+    Client, collaborator, and staff management components
+  </Card>
+  <Card title="Office Components" icon="building" href="/api/components/offices">
+    Ticket booth and office management interfaces
+  </Card>
+</CardGroup>
+
+## Shared Components
+
+The platform provides several reusable UI components:
+
+### Card Components
+
+- **BaseCard** - Basic card with optional header
+- **BlankCard** - Minimal card without borders
+- **ChildCard** - Nested card for content sections
+- **ParentCard** - Top-level card with title
+- **DashboardCard** - Card optimized for dashboard widgets
+
+### Form Components
+
+All form components are located in `src/components/forms/theme-elements/`:
+
+- **CustomTextField** - Styled text input field
+- **CustomFormLabel** - Consistent form labels
+- **CustomSelect** - Dropdown select component
+- **CustomCheckbox** - Checkbox input
+- **CustomDatePicker** - Date selection
+- **CustomDateTimePicker** - Date and time selection
+- **CustomPhoneField** - Phone number input
+- **CustomCurrencyField** - Currency formatting input
+
+## Common Patterns
+
+### Data Tables
+
+Most list views use PrimeReact's DataTable component with consistent styling:
+
+```jsx
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { FilterMatchMode } from 'primereact/api';
+
+// Standard table configuration
+<DataTable
+  value={rows}
+  stripedRows={false}
+  globalFilterFields={['name', 'status', 'email']}
+  dataKey="id"
+  paginator
+  rows={10}
+  rowsPerPageOptions={[10, 15, 20]}
+  filters={filters}
+  loading={loading}
+  rowHover
+>
+  <Column field="name" header="Name" sortable />
+  <Column field="status" header="Status" body={statusTemplate} />
+</DataTable>
+```
+
+### Redux Integration
+
+Components connect to Redux for state management:
+
+```jsx
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchEvents } from 'src/store/apps/events/EventsSlice';
+
+const MyComponent = () => {
+  const dispatch = useDispatch();
+  const events = useSelector((state) => state.events.Events);
+  
+  React.useEffect(() => {
+    dispatch(fetchEvents());
+  }, [dispatch]);
+  
+  return <div>{/* component content */}</div>;
+};
+```
+
+### Navigation
+
+Components use React Router for navigation:
+
+```jsx
+import { useNavigate } from 'react-router';
+
+const navigate = useNavigate();
+
+// Navigate to detail page
+const handleClickDetail = (id) => {
+  navigate(`/evento-detalles?id=${id}`);
+};
+```
+
+### Permissions
+
+Components implement CASL-based permission checks:
+
+```jsx
+import { Can } from '@casl/react';
+import { AbilityContext } from 'src/guards/contexts/AbilityContext';
+
+const ability = React.useContext(AbilityContext);
+
+<Can I="create" a="events" ability={ability}>
+  <Button onClick={handleCreate}>Create Event</Button>
+</Can>
+```
+
+## Theming
+
+Components use Material-UI theming with dark mode support:
+
+```jsx
+import { useTheme } from '@mui/material';
+
+const theme = useTheme();
+const isDark = theme.palette.mode === 'dark';
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Component Structure">
+    - Keep components focused on a single responsibility
+    - Extract reusable logic into custom hooks
+    - Use TypeScript prop types or PropTypes for validation
+    - Keep component files under 500 lines when possible
+  </Accordion>
+  
+  <Accordion title="State Management">
+    - Use Redux for global application state
+    - Use local React state for UI-only state
+    - Dispatch actions in useEffect hooks
+    - Select minimal state from Redux store
+  </Accordion>
+  
+  <Accordion title="Styling">
+    - Use MUI's sx prop for component-specific styles
+    - Define consistent table styles for DataTable components
+    - Support both light and dark themes
+    - Use theme palette colors instead of hardcoded values
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Memoize expensive computations with useMemo
+    - Use React.memo for components that render frequently
+    - Implement pagination for large data sets
+    - Lazy load images and heavy components
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Event Components" icon="calendar" href="/api/components/events">
+    Explore event management component APIs
+  </Card>
+  <Card title="User Components" icon="users" href="/api/components/users">
+    Learn about user management components
+  </Card>
+  <Card title="Office Components" icon="building" href="/api/components/offices">
+    Discover office management components
+  </Card>
+  <Card title="Store API" icon="database" href="/api/store/overview">
+    Understand Redux store structure
+  </Card>
+</CardGroup>

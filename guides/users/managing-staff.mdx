@@ -1,0 +1,232 @@
+---
+title: Managing Staff Users
+description: Learn how to create, edit, and manage staff user accounts in TMT
+---
+
+Staff users are internal team members who have access to the TMT platform with specific permissions based on their role in the organization.
+
+## Overview
+
+Staff management allows you to:
+
+<CardGroup cols={2}>
+  <Card title="Create Staff Accounts" icon="user-plus">
+    Add new staff members with specific roles and permissions
+  </Card>
+  <Card title="Edit Staff Details" icon="pen-to-square">
+    Update staff information and role assignments
+  </Card>
+  <Card title="View Staff List" icon="users">
+    Browse and search all staff members
+  </Card>
+  <Card title="Manage Permissions" icon="shield-halved">
+    Control access levels through staff hierarchy
+  </Card>
+</CardGroup>
+
+## Creating a New Staff User
+
+To create a new staff user account, follow these steps:
+
+<Steps>
+  <Step title="Navigate to Staff Management">
+    Go to **Users** > **Staff** in the main navigation menu, then click the **Add Staff** button.
+  </Step>
+
+  <Step title="Upload Profile Picture (Optional)">
+    Upload a profile photo for the staff member:
+    - Accepted formats: JPG, GIF, or PNG
+    - Maximum file size: 800KB
+    - Click **Upload** to select a file or **Reset** to remove it
+  </Step>
+
+  <Step title="Select User Profile Type">
+    Choose the appropriate account type from the staff hierarchy:
+    - **Account Type**: Select the role that defines this user's permissions and access level
+    
+    This determines what features and data the user can access within the platform.
+  </Step>
+
+  <Step title="Set Password">
+    Create secure login credentials:
+    - **Password**: Must be at least 6 characters
+    - **Confirm Password**: Must match the password field
+    - Use the eye icon to toggle password visibility
+  </Step>
+
+  <Step title="Enter Personal Details">
+    Fill in the required personal information:
+    
+    **Required Fields:**
+    - **Name**: Full name of the staff member
+    - **Email**: Valid email address (used for login)
+    - **ID Type**: Select identification document type
+    - **ID Number**: Enter identification number (numbers only)
+    - **Phone**: International phone number with country code
+  </Step>
+
+  <Step title="Provide Address Information">
+    Complete the address details:
+    - **Country**: Select from available countries
+    - **Postal Code**: Enter postal/zip code
+    - **City**: Enter city name
+    - **Address**: Complete street address
+  </Step>
+
+  <Step title="Save the Staff User">
+    Click **Save** to create the staff account. The new user will be able to log in immediately with the provided credentials.
+  </Step>
+</Steps>
+
+## Editing Staff Information
+
+To update an existing staff user's information:
+
+<Steps>
+  <Step title="Locate the Staff User">
+    - Navigate to the **Staff List**
+    - Use the search bar to find specific staff members by name, email, or creation date
+    - Click the **eye icon** (View Details) next to the staff member you want to edit
+  </Step>
+
+  <Step title="Access Edit Mode">
+    From the staff detail page, click the **Edit** button to enter edit mode.
+  </Step>
+
+  <Step title="Update Information">
+    Modify any of the following fields:
+    - Profile photo
+    - Personal details (name, phone, ID information)
+    - Account type
+    - Address information
+    
+    <Note>
+      **Email addresses cannot be changed** after account creation for security reasons.
+    </Note>
+  </Step>
+
+  <Step title="Save Changes">
+    Click **Save** to apply the changes or **Cancel** to discard them.
+  </Step>
+</Steps>
+
+## Viewing Staff Users
+
+The staff list provides a comprehensive view of all staff members:
+
+### List Features
+
+- **Search**: Filter staff by name, email, or creation date
+- **Status Indicators**: See active/inactive status at a glance
+- **Sorting**: Sort by name, creation date, status, or email
+- **Pagination**: Navigate through large staff lists with configurable rows per page
+- **Export**: Download staff data as CSV for external reporting
+
+### Staff Information Displayed
+
+- Profile picture
+- Full name
+- Creation date
+- Active status
+- Email address
+- Quick actions (view details)
+
+## Staff Hierarchy and Permissions
+
+The account type determines a staff user's access level:
+
+<Warning>
+  Staff hierarchy levels are configured in the system setup. Ensure you assign the correct account type to grant appropriate permissions.
+</Warning>
+
+### Key Considerations
+
+- Account types define which modules and features staff can access
+- Higher hierarchy levels typically have broader permissions
+- Changes to account type take effect immediately
+- Only administrators can modify staff account types
+
+## Validation Rules
+
+When creating or editing staff users, the following validations apply:
+
+| Field | Validation Rule |
+|-------|----------------|
+| Email | Must be valid email format and unique |
+| Name | Required, cannot be empty |
+| Phone | Valid international phone number |
+| ID Number | Numbers only, required |
+| ID Type | Must select from available types |
+| Password | Minimum 6 characters (creation only) |
+| Country | Must select from available countries |
+| City | Required |
+| Postal Code | Required |
+| Address | Required |
+| Account Type | Must select from staff hierarchy |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Profile Pictures">
+    - Use professional photos with clear facial visibility
+    - Maintain consistent image dimensions (recommended: 200x200 pixels)
+    - Keep file sizes under 500KB for faster loading
+    - Use square aspect ratios for best display results
+  </Accordion>
+
+  <Accordion title="Account Security">
+    - Use strong passwords with a mix of characters
+    - Never share login credentials
+    - Review and update account types when staff roles change
+    - Deactivate accounts for staff members who leave the organization
+  </Accordion>
+
+  <Accordion title="Data Accuracy">
+    - Verify email addresses before saving to ensure staff receive notifications
+    - Keep phone numbers current for two-factor authentication
+    - Update address information when staff relocate
+    - Review staff details regularly for accuracy
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Tabs>
+  <Tab title="Cannot Create User">
+    **Issue**: Save button is disabled or error occurs
+    
+    **Solutions**:
+    - Ensure all required fields are filled
+    - Verify the email address is not already in use
+    - Check that passwords match
+    - Confirm ID number contains only digits
+    - Validate phone number format is correct
+  </Tab>
+
+  <Tab title="Image Upload Fails">
+    **Issue**: Profile picture won't upload
+    
+    **Solutions**:
+    - Check file size is under 800KB
+    - Verify file format is JPG, GIF, or PNG
+    - Try compressing the image
+    - Ensure stable internet connection
+  </Tab>
+
+  <Tab title="Cannot Change Email">
+    **Issue**: Email field is disabled in edit mode
+    
+    **Explanation**: Email addresses cannot be changed after account creation as they serve as the unique identifier for login and security purposes.
+  </Tab>
+</Tabs>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Managing Clients" icon="building" href="/guides/users/managing-clients">
+    Learn how to manage client users
+  </Card>
+  <Card title="Managing Collaborators" icon="handshake" href="/guides/users/managing-collaborators">
+    Learn how to manage collaborator users
+  </Card>
+</CardGroup>

@@ -1,0 +1,372 @@
+---
+title: Portal Administration
+description: Configure and manage customer-facing event portals for online ticket sales
+---
+
+Portal Administration allows you to create and customize white-labeled event portals for clients. Each portal is a complete branded website where customers can browse events, purchase tickets, and access event information.
+
+## Portal Overview
+
+Portals in TMT provide:
+
+- Custom branding with client logos and colors
+- Event listings and ticket sales
+- FAQs and contact information
+- Interactive maps showing event locations
+- Social media integration
+- Multi-language support
+
+## Creating a New Portal
+
+<Steps>
+  <Step title="Navigate to Portals">
+    Access the portals section from the admin menu and click "Crear Portal" (Create Portal).
+  </Step>
+  
+  <Step title="Configure Basic Portal Information">
+    Enter the fundamental portal details:
+    
+    **Required Fields:**
+    - **Portal Name**: Internal identifier for the portal
+    - **Client**: Select the client who owns this portal
+    - **Portal Description**: Brief description of the portal's purpose
+    - **URL Base**: The subdomain for the portal (e.g., "cliente" → cliente.eventmt.com)
+    
+    <Note>
+      Each client can only have one portal. The system validates this before creation.
+    </Note>
+  </Step>
+  
+  <Step title="Select Payment Office">
+    Choose the virtual office that will process online payments:
+    
+    - Select from active virtual offices
+    - If no office is selected, the default TMT office will be used
+    - The office determines available payment methods for the portal
+  </Step>
+  
+  <Step title="Upload Portal Images">
+    Upload the required visual assets:
+    
+    **Logo**
+    - Portal logo displayed in the header
+    - Recommended: PNG with transparent background
+    - Maximum height: 200px
+    - Stored at: `portals/{portal_id}/logo`
+    
+    **Favicon**
+    - Browser tab icon
+    - Recommended: 32x32 or 64x64 pixels
+    - Format: PNG or ICO
+    - Stored at: `portals/{portal_id}/favicon`
+    
+    <Warning>
+      Both logo and favicon are required. The form will not submit without these images.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Contact Information">
+    Set up customer support contact details:
+    
+    **Email Addresses**
+    - Add one or more contact email addresses
+    - Click "+" to add additional emails
+    - All emails are validated for correct format
+    
+    **Phone Number**
+    - Enter phone number (7-15 digits)
+    - Numbers only, no special characters
+    
+    **Phone Availability Schedule**
+    - Select days when phone support is available
+    - Set start and end times (24-hour format)
+    - Example: Monday-Friday, 09:00-18:00
+    
+    **Main Office Address**
+    - Full address of the main office location
+    - Minimum 10 characters
+    - Include street, city, and postal code
+  </Step>
+  
+  <Step title="Configure Portal Map">
+    Set the geographic location displayed on the portal:
+    
+    - Click on the map to set coordinates
+    - Enter latitude and longitude manually if needed
+    - This location is shown to customers for directions
+    
+    <Note>
+      The map helps customers find the main office or event venue locations.
+    </Note>
+  </Step>
+  
+  <Step title="Add Frequently Asked Questions">
+    Create FAQs to help customers:
+    
+    - At least one FAQ is recommended
+    - Each FAQ has a question and answer field
+    - Click "Agregar Pregunta Frecuente" to add more
+    - Click "Eliminar" to remove unwanted FAQs
+    
+    Example FAQs:
+    - How do I purchase tickets?
+    - What payment methods are accepted?
+    - Can I get a refund?
+    - How do I access my tickets?
+  </Step>
+  
+  <Step title="Set Portal Metadata">
+    Configure the portal's appearance and branding:
+    
+    **Title & Subtitle**
+    - Portal title: Main heading on homepage
+    - Portal subtitle: Tagline or description
+    
+    **Social Media Links**
+    - Facebook URL (optional)
+    - Instagram URL (optional)
+    - X/Twitter URL (optional)
+    - YouTube URL (optional)
+    
+    **Brand Colors**
+    - Primary Color: Main brand color for buttons and highlights
+    - Secondary Color: Accent color for secondary elements
+    - Use the color picker to select colors
+    - Preview shows selected colors
+    
+    <Warning>
+      Both primary and secondary colors are required for proper portal styling.
+    </Warning>
+  </Step>
+  
+  <Step title="Save Portal Configuration">
+    Click "Guardar" (Save) to create the portal.
+    
+    The system will:
+    1. Validate that the client doesn't have an existing portal
+    2. Upload logo and favicon to Firebase Storage
+    3. Create portal document in `portals` collection
+    4. Create tenant mapping in `portals_tenants` collection
+    5. Set portal status to active
+  </Step>
+</Steps>
+
+## Portal Data Structure
+
+Portals are stored with the following structure:
+
+```javascript
+{
+  client_id: "client_firestore_id",
+  client_name: "Client Name",
+  media_favicon: "https://storage.googleapis.com/...",
+  media_logo: "https://storage.googleapis.com/...",
+  metadata: {
+    color_primary: "#FF5733",
+    color_secondary: "#33C4FF",
+    social_facebook: "https://facebook.com/...",
+    social_instagram: "https://instagram.com/...",
+    social_x: "https://x.com/...",
+    social_youtube: "https://youtube.com/...",
+    subtitle: "Portal tagline",
+    title: "Portal title",
+    contact_info: {
+      emails: ["contact@example.com"],
+      phone: {
+        number: "1234567890",
+        schedule: {
+          days: ["Lunes", "Martes", "Miércoles"],
+          startTime: "09:00",
+          endTime: "18:00"
+        }
+      },
+      main_office: "Full office address"
+    }
+  },
+  office_id: "office_firestore_id",
+  office_name: "Virtual Office Name",
+  portal_description: "Portal description",
+  portal_name: "Portal Name",
+  status: true,
+  url: {
+    base: "cliente"
+  },
+  faqs: [
+    {
+      question: "How do I buy tickets?",
+      answer: "Visit our events page..."
+    }
+  ],
+  location: {
+    latitude: 10.5000,
+    longitude: -66.9167
+  }
+}
+```
+
+## Portal Tenants
+
+The `portals_tenants` collection maps domain names to portal IDs:
+
+```javascript
+// Document ID: "cliente.eventmt.com"
+{
+  client_id: "client_id",
+  client_name: "Client Name",
+  name: "Portal Name",
+  value: "portal_firestore_id"
+}
+```
+
+This enables the system to route requests from `cliente.eventmt.com` to the correct portal.
+
+## Managing Existing Portals
+
+### Viewing Portal List
+
+The portals table displays:
+
+- Portal name
+- Client name
+- URL (subdomain)
+- Status (active/inactive)
+- Actions (view, edit)
+
+### Editing Portal Settings
+
+To modify an existing portal:
+
+1. Click the edit icon in the portals list
+2. Update the desired fields
+3. Click "Guardar" to save changes
+
+<Note>
+  URL changes require DNS updates and may take time to propagate.
+</Note>
+
+## Portal Detail View
+
+The portal detail page shows:
+
+- Complete portal configuration
+- Preview of logo and favicon
+- Color scheme preview
+- Contact information
+- FAQs
+- Associated events
+- Sales statistics
+
+## Color Scheme Selection
+
+The portal uses your selected colors throughout:
+
+- **Primary Color**: Used for main buttons, links, and navigation highlights
+- **Secondary Color**: Used for accents, secondary buttons, and hover states
+
+The color picker provides a predefined palette for quick selection.
+
+## Contact Information Best Practices
+
+1. **Multiple Contact Emails**: Provide at least 2 email addresses for redundancy
+2. **Accurate Phone Hours**: Keep availability schedule updated
+3. **Complete Address**: Include full postal address with landmarks
+4. **Map Accuracy**: Verify coordinates point to the correct location
+
+## FAQ Guidelines
+
+<Steps>
+  <Step title="Cover Common Questions">
+    Address the most frequently asked customer questions:
+    - Ticket purchasing process
+    - Payment methods
+    - Refund policies
+    - Ticket delivery
+    - Event access
+  </Step>
+  
+  <Step title="Keep Answers Concise">
+    Provide clear, brief answers that are easy to read on mobile devices.
+  </Step>
+  
+  <Step title="Update Regularly">
+    Review and update FAQs based on customer support inquiries.
+  </Step>
+</Steps>
+
+## Social Media Integration
+
+Portal social links appear in the footer and allow customers to:
+
+- Follow the client on social platforms
+- Share events on social media
+- Connect with customer support
+
+## Portal Status Management
+
+- **Active (status: true)**: Portal is live and accessible to customers
+- **Inactive (status: false)**: Portal is disabled but configuration is preserved
+
+<Warning>
+  Deactivating a portal immediately makes it inaccessible to customers. Existing tickets remain valid.
+</Warning>
+
+## URL Configuration
+
+Portal URLs follow the format:
+
+```
+{base}.eventmt.com
+```
+
+Where `{base}` is the URL base you configure. Choose a base that:
+
+- Is short and memorable
+- Represents the client brand
+- Contains no spaces or special characters
+- Is unique across all portals
+
+## Image Requirements
+
+### Logo Specifications
+
+- **Format**: PNG (with transparency) or JPG
+- **Recommended Size**: 300x100 pixels
+- **Maximum File Size**: 2MB
+- **Usage**: Header, emails, and promotional materials
+
+### Favicon Specifications
+
+- **Format**: PNG or ICO
+- **Required Size**: 32x32 or 64x64 pixels
+- **Maximum File Size**: 500KB
+- **Usage**: Browser tabs and bookmarks
+
+## Troubleshooting
+
+### Client Already Has Portal
+
+Error: "Este cliente ya tiene un portal asignado"
+
+- Each client can only have one portal
+- Edit the existing portal instead of creating a new one
+- Contact support to reassign portals if needed
+
+### Image Upload Fails
+
+- Verify image format (PNG, JPG, or ICO)
+- Check file size is under the limit
+- Ensure stable internet connection
+- Try uploading a different image
+
+### Color Not Updating
+
+- Ensure both primary and secondary colors are selected
+- Click the color preview to verify selection
+- Clear browser cache if colors don't update
+
+### Portal Not Accessible
+
+- Verify portal status is set to active
+- Check that the URL base is correct
+- Allow time for DNS propagation (up to 24 hours)
+- Clear browser cache and cookies

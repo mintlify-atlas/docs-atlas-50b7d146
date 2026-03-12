@@ -1,0 +1,651 @@
+---
+title: 'Managing Event Orders'
+description: 'View, track, and manage ticket orders for your events'
+---
+
+# Managing Event Orders
+
+Track and manage all ticket orders for your events, from initial purchase through fulfillment and entry. Monitor sales performance, process refunds, and handle customer inquiries.
+
+## Overview
+
+The order management system allows you to:
+
+- **View all orders** for an event
+- **Track order status** and payment
+- **Review order details** including tickets and transactions
+- **Monitor sales performance** in real-time
+- **Export order data** for reporting and accounting
+- **Process refunds** and modifications
+
+## Accessing Order Management
+
+Navigate to **Events** → Select your event → **Órdenes**
+
+## Order List View
+
+The orders table displays all purchases for the event:
+
+```jsx
+<DataTable
+  value={rows}
+  paginator
+  rows={10}
+  globalFilterFields={['event_name', 'amount', 'status', 'creation_date']}
+  emptyMessage="No se encontraron órdenes."
+  sortField="creation_date"
+  sortOrder={-1}
+>
+  <Column 
+    field="event_name" 
+    header="Nombre del Evento" 
+    body={NameTemplate} 
+    sortable 
+  />
+  <Column 
+    field="status" 
+    header="Estatus" 
+    body={statusTemplate} 
+    sortable 
+  />
+  <Column 
+    field="creation_date" 
+    header="Fecha de creación" 
+    body={dateTemplate} 
+    sortable 
+  />
+  <Column 
+    field="amount" 
+    header="Monto" 
+    body={amountTemplate} 
+    sortable 
+  />
+  <Column 
+    field="actions" 
+    header="Acciones" 
+    body={actionsTemplate} 
+  />
+</DataTable>
+```
+
+### Order Card Display
+
+Each order shows key information:
+
+```jsx
+const NameTemplate = (rowData) => {
+  return (
+    <Box display="flex" alignItems="center">
+      <IconTicket stroke={1.5} size="2rem" />
+      <Box ml={2}>
+        <Typography variant="h6" fontWeight="600">
+          {rowData.event_name}
+        </Typography>
+        <Typography color="textSecondary" variant="subtitle2">
+          {rowData.office_name}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+```
+
+### Status Indicators
+
+```jsx
+const statusTemplate = (rowData) => {
+  return (
+    <Chip
+      label={rowData.status}
+      size="small"
+      sx={{
+        backgroundColor: rowData.status === "Activo"
+          ? 'rgba(46, 204, 113, 0.1)'
+          : 'rgba(231, 76, 60, 0.1)',
+        color: rowData.status === "Activo"
+          ? theme.palette.success.main
+          : theme.palette.error.main,
+        fontWeight: 600,
+        borderRadius: '6px',
+      }}
+      icon={
+        <Box
+          sx={{
+            backgroundColor: rowData.status === "Activo"
+              ? theme.palette.success.main
+              : theme.palette.error.main,
+            borderRadius: '50%',
+            height: '8px',
+            width: '8px',
+          }}
+        />
+      }
+    />
+  );
+};
+```
+
+**Order Status:**
+
+- **Activo** - Order completed, tickets valid
+- **Inactivo** - Order cancelled or refunded
+- **Pendiente** - Payment pending
+- **Procesando** - Order being processed
+
+### Amount Display
+
+Formatted currency display:
+
+```jsx
+const amountTemplate = (rowData) => {
+  return (
+    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+      {new Intl.NumberFormat('es-MX', { 
+        style: 'currency', 
+        currency: 'MXN' 
+      }).format(rowData.amount)}
+    </Typography>
+  );
+};
+```
+
+## Viewing Order Details
+
+Click on any order to view complete information:
+
+<Steps>
+
+### Step 1: Access Order Details
+
+Click the eye icon or order row to open details page.
+
+### Step 2: Review Order Information
+
+The order detail page shows:
+
+**Order Header:**
+- Order ID
+- Purchase date and time
+- Order status
+- Total amount
+- Payment method
+
+**Customer Information:**
+- Buyer name
+- Email address
+- Phone number
+- Billing information
+
+**Event Information:**
+- Event name
+- Event date and time
+- Venue name and location
+- Office/point of sale (if applicable)
+
+### Step 3: View Included Tickets
+
+The tickets table shows all tickets in the order:
+
+```jsx
+<DataTable
+  value={orderTickets}
+  header={header2}
+  dataKey="id"
+  paginator
+  rows={10}
+  filters={filters2}
+  globalFilterFields={['id', 'zone', 'seat']}
+  emptyMessage="No se encontraron tickets."
+>
+  <Column 
+    field="id" 
+    header="ID Ticket" 
+    body={ticketTemplate} 
+    sortable 
+  />
+  <Column 
+    field="zone" 
+    header="Zona" 
+    sortable 
+  />
+  <Column 
+    field="seat" 
+    header="Asiento" 
+    sortable 
+  />
+  <Column 
+    field="price" 
+    header="Precio" 
+    body={amountTemplate} 
+    sortable 
+  />
+  <Column 
+    field="status" 
+    header="Estatus" 
+    body={statusTemplate} 
+  />
+</DataTable>
+```
+
+**Ticket Information:**
+- Ticket ID (unique identifier)
+- Zone and section
+- Seat number (if reserved seating)
+- Individual price
+- Ticket status (active, used, cancelled)
+
+### Step 4: Review Transaction History
+
+View all payment transactions:
+
+```jsx
+<DataTable
+  value={orderTransactions}
+  header={header}
+  dataKey="id"
+  paginator
+  rows={10}
+  filters={filters}
+  globalFilterFields={['payment_id', 'payment_name', 'amount']}
+  emptyMessage="No se encontraron transacciones."
+>
+  <Column 
+    field="payment_name" 
+    header="Método de Pago" 
+    body={nameTemplate} 
+    sortable 
+  />
+  <Column 
+    field="amount" 
+    header="Monto" 
+    body={amountTemplate} 
+    sortable 
+  />
+  <Column 
+    field="date" 
+    header="Fecha" 
+    body={dateTemplate} 
+    sortable 
+  />
+  <Column 
+    field="status" 
+    header="Estatus" 
+    body={statusTemplate} 
+  />
+</DataTable>
+```
+
+**Transaction Details:**
+- Payment method (credit card, debit, transfer)
+- Payment gateway transaction ID
+- Amount charged
+- Transaction date and time
+- Approval status
+
+</Steps>
+
+## Transaction Information Display
+
+```jsx
+const nameTemplate = (rowData) => {
+  return (
+    <Box display="flex" alignItems="center">
+      <IconTransferIn stroke={1.5} size="2rem" />
+      <Box ml={2}>
+        <Typography variant="h6" fontWeight="600">
+          {rowData.payment_name}
+        </Typography>
+        <Typography color="textSecondary" variant="subtitle2">
+          {rowData.payment_id}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
+const statusTemplate = (rowData) => {
+  return (
+    <Chip
+      label={rowData.status ? 'Aprobado' : 'Por aprobar'}
+      size="small"
+      sx={{
+        backgroundColor: rowData.status
+          ? 'rgba(46, 204, 113, 0.1)'
+          : 'rgba(231, 76, 60, 0.1)',
+        color: rowData.status
+          ? theme.palette.success.main
+          : theme.palette.error.main,
+        fontWeight: 600,
+      }}
+    />
+  );
+};
+```
+
+## Searching and Filtering Orders
+
+Use the search functionality to find specific orders:
+
+```jsx
+<Paper elevation={0}>
+  <IconSearch size="1.1rem" color={theme.palette.text.secondary} />
+  <CustomTextField
+    value={globalFilterValue}
+    onChange={onGlobalFilterChange}
+    placeholder="Buscar orden..."
+    fullWidth
+  />
+  <IconButton size="small" color="primary">
+    <IconFilter size="1.1rem" />
+  </IconButton>
+</Paper>
+```
+
+Search by:
+- Order ID
+- Customer name or email
+- Event name
+- Transaction amount
+- Purchase date
+- Payment method
+
+## Order Data Structure
+
+Orders are stored with the following structure:
+
+```javascript
+const orderData = {
+  id: "order_abc123",
+  event_id: "evt_xyz789",
+  event_name: "Concierto 2024",
+  user_id: "user_123",
+  customer: {
+    name: "Juan Pérez",
+    email: "juan@example.com",
+    phone: "+52 55 1234 5678",
+    rfc: "PERJ850101ABC"
+  },
+  tickets: [
+    {
+      id: "ticket_001",
+      zone_id: "zone_vip",
+      zone_name: "VIP",
+      seat: "A-15",
+      price: 500,
+      status: true,
+      qr_code: "QR_DATA_HERE"
+    }
+  ],
+  transactions: [
+    {
+      payment_id: "PAY_XYZ123",
+      payment_name: "Tarjeta de Crédito Visa",
+      payment_gateway: "stripe",
+      amount: 500,
+      currency: "MXN",
+      status: true,
+      date: firebase.firestore.Timestamp.now(),
+      authorization_code: "123456"
+    }
+  ],
+  amount: 500,
+  office_id: "office_001",
+  office_name: "Punto de Venta Centro",
+  status: true,
+  date: {
+    created: firebase.firestore.Timestamp.now(),
+    updated: null
+  },
+  ledger: [
+    {
+      action: "Creado",
+      date: new Date(),
+      by: "user_123"
+    }
+  ]
+};
+```
+
+## Order Actions
+
+### Viewing Order Receipt
+
+Generate and display order receipt:
+
+```javascript
+const generateReceipt = async (orderId) => {
+  const order = await Firestore.collection('orders').doc(orderId).get();
+  const orderData = order.data();
+  
+  // Generate PDF or HTML receipt
+  const receipt = {
+    order_id: orderId,
+    customer: orderData.customer,
+    items: orderData.tickets.map(t => ({
+      description: `${t.zone_name} - ${t.seat}`,
+      quantity: 1,
+      unit_price: t.price,
+      total: t.price
+    })),
+    subtotal: orderData.amount,
+    fees: calculateFees(orderData.amount),
+    total: orderData.amount,
+    payment_method: orderData.transactions[0].payment_name
+  };
+  
+  return receipt;
+};
+```
+
+### Processing Refunds
+
+Handle order cancellations and refunds:
+
+```javascript
+const processRefund = async (orderId, reason) => {
+  // Update order status
+  await Firestore.collection('orders').doc(orderId).update({
+    status: false,
+    'ledger': firebase.firestore.FieldValue.arrayUnion({
+      action: 'Reembolsado',
+      reason: reason,
+      date: new Date()
+    })
+  });
+  
+  // Cancel associated tickets
+  const order = await Firestore.collection('orders').doc(orderId).get();
+  const tickets = order.data().tickets;
+  
+  for (const ticket of tickets) {
+    await Firestore
+      .collection('events')
+      .doc(order.data().event_id)
+      .collection('tickets')
+      .doc(ticket.id)
+      .update({
+        status: false,
+        cancelled_date: firebase.firestore.FieldValue.serverTimestamp()
+      });
+  }
+  
+  // Process payment refund through gateway
+  const transaction = order.data().transactions[0];
+  await processPaymentRefund(transaction.payment_id, transaction.amount);
+};
+```
+
+<Warning>
+Refunds cannot be undone. Always verify the request before processing a refund.
+</Warning>
+
+### Resending Order Confirmation
+
+Resend order confirmation email:
+
+```javascript
+const resendConfirmation = async (orderId) => {
+  const order = await Firestore.collection('orders').doc(orderId).get();
+  const orderData = order.data();
+  
+  await sendEmail({
+    to: orderData.customer.email,
+    template: 'order_confirmation',
+    data: {
+      order_id: orderId,
+      customer_name: orderData.customer.name,
+      event_name: orderData.event_name,
+      tickets: orderData.tickets,
+      total: orderData.amount
+    }
+  });
+};
+```
+
+## Exporting Order Data
+
+Export orders to CSV for reporting:
+
+```jsx
+const exportC = (selectionOnly) => {
+  dt.current.exportCSV({ selectionOnly });
+};
+
+<Tooltip title="Descargar CSV">
+  <IconButton onClick={() => exportC(false)}>
+    <IconDownload size="1.1rem" />
+  </IconButton>
+</Tooltip>
+```
+
+Exported file includes:
+- Order ID and date
+- Customer information
+- Event details
+- Ticket count and zones
+- Total amount
+- Payment status
+- Office/point of sale
+
+## Order Analytics
+
+Track order metrics:
+
+```javascript
+const getOrderAnalytics = async (eventId) => {
+  const orders = await Firestore
+    .collection('orders')
+    .where('event_id', '==', eventId)
+    .where('status', '==', true)
+    .get();
+  
+  const analytics = {
+    total_orders: orders.size,
+    total_revenue: 0,
+    total_tickets: 0,
+    avg_order_value: 0,
+    orders_by_zone: {},
+    orders_by_date: {},
+    payment_methods: {}
+  };
+  
+  orders.forEach(doc => {
+    const order = doc.data();
+    analytics.total_revenue += order.amount;
+    analytics.total_tickets += order.tickets.length;
+    
+    // Group by zone
+    order.tickets.forEach(ticket => {
+      if (!analytics.orders_by_zone[ticket.zone_name]) {
+        analytics.orders_by_zone[ticket.zone_name] = 0;
+      }
+      analytics.orders_by_zone[ticket.zone_name]++;
+    });
+    
+    // Track payment methods
+    const payment = order.transactions[0].payment_name;
+    if (!analytics.payment_methods[payment]) {
+      analytics.payment_methods[payment] = 0;
+    }
+    analytics.payment_methods[payment]++;
+  });
+  
+  analytics.avg_order_value = 
+    analytics.total_revenue / analytics.total_orders;
+  
+  return analytics;
+};
+```
+
+## Troubleshooting
+
+### Order Not Found
+
+If an order doesn't appear:
+
+1. **Verify order ID** - Check for typos in search
+2. **Check filters** - Clear all filters and search again
+3. **Confirm event** - Ensure you're viewing the correct event
+4. **Review status** - Inactive orders may be hidden by default
+
+### Payment Issues
+
+If a payment shows as pending:
+
+<Warning>
+1. **Check payment gateway** - Review transaction status in Stripe/PayPal
+2. **Verify webhook delivery** - Ensure payment confirmations were received
+3. **Manual verification** - Contact payment provider for transaction status
+4. **Update manually** - If confirmed, update order status in database
+</Warning>
+
+### Missing Tickets
+
+If tickets don't appear in order:
+
+1. Check that ticket generation completed successfully
+2. Verify tickets exist in event tickets collection
+3. Confirm ticket IDs match order ticket array
+4. Review order creation logs for errors
+
+## Best Practices
+
+### Order Management
+
+- **Review pending orders** daily to catch payment issues
+- **Export order data** regularly for backup and accounting
+- **Monitor refund requests** and process promptly
+- **Track order patterns** to optimize pricing and inventory
+
+### Customer Service
+
+- **Respond quickly** to order inquiries
+- **Verify identity** before discussing order details
+- **Document interactions** in order ledger
+- **Escalate issues** to management when necessary
+
+### Data Security
+
+- **Protect customer data** - Limit access to authorized personnel only
+- **Secure payment information** - Never store full card numbers
+- **Audit access logs** - Track who views sensitive order data
+- **Comply with regulations** - Follow PCI DSS and data privacy laws
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Ticket Management" icon="ticket" href="/guides/tickets/overview">
+    Manage individual tickets and entry
+  </Card>
+  <Card title="Sales Analytics" icon="chart-line" href="/guides/analytics/sales">
+    View detailed sales reports and metrics
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+- [Event Setup](/guides/events/event-setup)
+- [Payment Processing](/guides/payments/overview)
+- [Refund Processing](/guides/payments/refunds)
+- [Customer Communications](/guides/communications/customers)
+- [Reporting and Analytics](/guides/analytics/overview)

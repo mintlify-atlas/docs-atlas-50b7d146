@@ -1,0 +1,710 @@
+---
+title: Authentication & Security
+description: Multi-provider authentication with Auth0, Firebase, JWT tokens, and CASL-based permission system
+icon: 'shield-halved'
+---
+
+The TMT platform implements a comprehensive authentication and authorization system using multiple providers and a flexible permission framework.
+
+## Authentication Providers
+
+The platform supports multiple authentication methods:
+
+<CardGroup cols={2}>
+  <Card title="Firebase Authentication" icon="fire">
+    Primary authentication provider with email/password and social logins
+  </Card>
+  <Card title="Auth0" icon="lock">
+    Enterprise authentication provider with advanced security features
+  </Card>
+  <Card title="JWT Tokens" icon="key">
+    Session management using JSON Web Tokens
+  </Card>
+  <Card title="Social Logins" icon="users">
+    Google, Facebook, and Twitter authentication
+  </Card>
+</CardGroup>
+
+## Firebase Authentication
+
+**Implementation**: `src/guards/firebase/FirebaseContext.js`
+
+### Authentication Context
+
+The Firebase authentication context manages user sessions:
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:9-18
+const AuthContext = createContext({
+  platform: 'Firebase',
+  signup: () => Promise.resolve(),
+  signin: () => Promise.resolve(),
+  logout: () => Promise.resolve(),
+  resetPassword: () => Promise.resolve(),
+  onceGetUsers: () => Promise.resolve(),
+  CreateUser: () => Promise.resolve(),
+  UpdateUser: () => Promise.resolve(),
+});
+```
+
+### User Session Management
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:24-74
+useEffect(() => {
+  const unsubscribe = firebase.auth().onAuthStateChanged(async (user) => {
+    if (user) {
+      // Fetch user data from Firestore
+      const querySnapshot = await Firestore.collection('u_staff').doc(user.uid).get();
+      
+      // Check user status
+      if (querySnapshot.data()?.status !== true) {
+        logout();
+      } else {
+        // Get IP location
+        const queryIP = await fetch('https://ipapi.co/json/');
+        const data = await queryIP.json();
+        
+        // Update last access
+        await Firestore.collection('u_staff').doc(user.uid).update({
+          "date.last_access": firebase.firestore.FieldValue.serverTimestamp(),
+          last_IP: data.ip
+        });
+        
+        // Load setup configuration
+        dispatch(fetchSetup());
+        
+        // Set authenticated state
+        dispatch(authStateChanged({
+          isAuthenticated: true,
+          user: {
+            uid: user.uid,
+            avatar: querySnapshot.data()?.image ?? null,
+            account_type: querySnapshot.data()?.account_type,
+            phone: querySnapshot.data()?.phone ?? "",
+            address: querySnapshot.data()?.address ?? {...},
+            email: user.email,
+            country_calling_code: data.country_calling_code,
+            name: querySnapshot.data()?.name,
+            ...(querySnapshot.data())
+          },
+        }));
+      }
+    } else {
+      dispatch(authStateChanged({
+        isAuthenticated: false,
+        user: null,
+      }));
+    }
+  });
+  
+  return () => unsubscribe();
+}, [dispatch]);
+```
+
+<Note>
+  On each login, the system:
+  1. Verifies user status is active
+  2. Fetches user's IP address and location
+  3. Updates last access timestamp
+  4. Loads platform setup configuration
+  5. Dispatches user data to Redux store
+</Note>
+
+### Authentication Methods
+
+#### Email/Password Sign In
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:102-103
+const signin = (email, password) =>
+  firebase.auth().signInWithEmailAndPassword(email, password);
+```
+
+#### Sign Up
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:98-99
+const signup = (email, password) =>
+  firebase.auth().createUserWithEmailAndPassword(email, password);
+```
+
+#### Password Reset
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:106-107
+const ResetPassword = (email) =>
+  firebase.auth().sendPasswordResetEmail(email);
+```
+
+#### Social Logins
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:78-95
+
+// Google Login
+const loginWithGoogle = () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  return firebase.auth().signInWithPopup(provider);
+};
+
+// Facebook Login
+const loginWithFaceBook = () => {
+  const provider = new firebase.auth.FacebookAuthProvider();
+  return firebase.auth().signInWithPopup(provider);
+};
+
+// Twitter Login
+const loginWithTwitter = () => {
+  const provider = new firebase.auth.TwitterAuthProvider();
+  return firebase.auth().signInWithPopup(provider);
+};
+```
+
+#### Logout
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:110
+const logout = () => firebase.auth().signOut();
+```
+
+### User Data Management
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:112-116
+const CreateUser = (id, username, email) =>
+  firebase.database().ref(`users/${id}`).set({
+    username,
+    email,
+  });
+```
+
+```javascript
+// From src/guards/firebase/FirebaseContext.js:118-128
+const UpdateUser = (oldUser, newUser) => {
+  dispatch(authStateChanged({
+    isAuthenticated: true,
+    user: {
+      uid: oldUser.uid,
+      account_type: oldUser.account_type,
+      avatar: newUser.image ?? oldUser.avatar,
+      ...newUser,
+    },
+  }))
+};
+```
+
+## Auth0 Authentication
+
+**Implementation**: `src/guards/auth0/Auth0Context.js`
+
+### Auth0 Configuration
+
+```javascript
+// From src/guards/auth0/Auth0Context.js:4-7
+const auth0Config = {
+  client_id: 'M3M4RZPdblzFf0cEXcLwWYHiHwasgG5H',
+  domain: 'qprnlxvbaqmxo171.us.auth0.com',
+};
+```
+
+<Warning>
+  The Auth0 credentials shown above are from the source code and should be moved to environment variables in production.
+</Warning>
+
+### Auth0 Context Setup
+
+```javascript
+// From src/guards/auth0/Auth0Context.js:52-86
+useEffect(() => {
+  const initialize = async () => {
+    try {
+      auth0Client = new Auth0Client({
+        domain: auth0Config.domain,
+        clientId: auth0Config.client_id,
+        authorizationParams: { redirect_uri: window.location.origin },
+      });
+      
+      await auth0Client.checkSession();
+      
+      const isAuthenticated = await auth0Client.isAuthenticated();
+      
+      if (isAuthenticated) {
+        const user = await auth0Client.getUser();
+        
+        dispatch({
+          type: 'INITIALIZE',
+          payload: { isAuthenticated, user },
+        });
+      } else {
+        dispatch({
+          type: 'INITIALIZE',
+          payload: { isAuthenticated, user: null },
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      dispatch({
+        type: 'INITIALIZE',
+        payload: { isAuthenticated: false, user: null },
+      });
+    }
+  };
+  
+  initialize();
+}, []);
+```
+
+### Auth0 Login
+
+```javascript
+// From src/guards/auth0/Auth0Context.js:89-97
+const signin = async () => {
+  await auth0Client.loginWithPopup();
+  const isAuthenticated = await auth0Client.isAuthenticated();
+  
+  if (isAuthenticated) {
+    const user = await auth0Client.getUser();
+    dispatch({ type: 'LOGIN', payload: { user } });
+  }
+};
+```
+
+### Auth0 Logout
+
+```javascript
+// From src/guards/auth0/Auth0Context.js:99-102
+const logout = () => {
+  auth0Client.logout();
+  dispatch({ type: 'LOGOUT' });
+};
+```
+
+## JWT Authentication
+
+**Implementation**: `src/guards/jwt/JwtContext.js` and `src/guards/jwt/Jwt.js`
+
+The JWT implementation provides token-based authentication for API requests.
+
+### JWT Token Management
+
+Tokens are stored in browser local storage or session storage and included in API request headers:
+
+```javascript
+// Typical JWT header
+Authorization: Bearer <jwt_token>
+```
+
+## Authentication Guards
+
+The platform uses guard components to protect routes and components.
+
+### Auth Guard
+
+**Location**: `src/guards/authGuard/AuthGuard.js`
+
+Protects routes that require authentication:
+
+```jsx
+<AuthGuard>
+  <ProtectedComponent />
+</AuthGuard>
+```
+
+Redirects unauthenticated users to the login page.
+
+### Guest Guard
+
+**Location**: `src/guards/authGuard/GuestGaurd.js`
+
+Protects routes that should only be accessible to unauthenticated users (like login pages):
+
+```jsx
+<GuestGuard>
+  <LoginPage />
+</GuestGuard>
+```
+
+Redirects authenticated users to the dashboard.
+
+### Permission Guard
+
+**Location**: `src/guards/authGuard/PermissionGuard.js`
+
+Protects routes and components based on user permissions:
+
+```javascript
+// From src/guards/authGuard/PermissionGuard.js:1-18
+import React from "react";
+import { useNavigate } from 'react-router-dom';
+import { AbilityContext } from "../contexts/AbilityContext";
+
+const PermissionGuard = ({ children, action, subject }) => {
+    const ability = React.useContext(AbilityContext);
+    const navigate = useNavigate();
+    
+    React.useEffect(() => {
+        if (!ability.can(action, subject)) {
+            navigate("/auth/permissions", { replace: true })
+        }
+    }, [navigate])
+    
+    return children
+};
+
+export default PermissionGuard;
+```
+
+**Usage:**
+
+```jsx
+<PermissionGuard action="create" subject="events">
+  <CreateEventButton />
+</PermissionGuard>
+```
+
+## Permission System (CASL)
+
+The platform uses [CASL](https://casl.js.org/) for ability-based permission management.
+
+### Ability Context
+
+**Location**: `src/guards/contexts/AbilityContext.js`
+
+Provides ability checking throughout the application.
+
+### Define Abilities
+
+**Location**: `src/guards/contexts/DefineAbilities.js`
+
+Defines permissions for each user role:
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:1-8
+import { AbilityBuilder, Ability } from '@casl/ability';
+
+export function defineAbilitiesFor(user) {
+    const { can, cannot, build } = new AbilityBuilder(Ability);
+    
+    if (!user) {
+        return build();
+    };
+```
+
+### Permission Structure
+
+Permissions are defined as action-subject pairs:
+
+- **Action**: What the user wants to do (e.g., 'create', 'edit', 'view', 'delete')
+- **Subject**: What the action applies to (e.g., 'events', 'users', 'tickets')
+
+### Role-Based Permissions
+
+#### Administrador (Full Access)
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:288-289
+if (user.account_type === 'Administrador') {
+    can('manage', 'all');
+}
+```
+
+Administrators can perform any action on any subject.
+
+#### Coordinador (Event Manager)
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:11-92
+can: [
+  ['create', 'usersClients'],
+  ['edit', 'usersClients'],
+  ['create', 'usersCollaborators'],
+  ['edit', 'usersCollaborators'],
+  ['create', 'events'],
+  ['edit', 'events'],
+  ['read', 'eventsPreMontaje'],
+  ['create', 'eventsPreMontaje'],
+  ['edit', 'eventsPreMontaje'],
+  // ... full list in source
+]
+
+cannot: [
+  ['create', 'usersStaff'],
+  ['edit', 'usersStaff'],
+  ['change', 'eventsStatus'],
+  ['change', 'ticketsStatus'],
+  // ... full list in source
+]
+```
+
+#### Contador (Accountant)
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:93-161
+can: [
+  ['read', 'contractsDetail'],
+  ['read', 'addendumDetail'],
+  ['view', 'ViewClients'],
+  ['view', 'ViewClientsDetail'],
+  // ... primarily view-only access to financial data
+]
+```
+
+#### Soporte (Support)
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:162-230
+can: [
+  ['read', 'eventsPreMontaje'],
+  ['read', 'eventsDetailCredentials'],
+  ['view', 'ViewClients'],
+  ['view', 'ViewEvents'],
+  // ... read-only access to most modules
+]
+```
+
+#### Creador de Sala de Eventos (Venue Creator)
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js:275-284
+can: [
+  ['create', 'EventVenue'],
+  ['edit', 'eventVenues'],
+  ['read', 'EventVenueDetail'],
+  ['view', 'ViewEventVenue'],
+  ['view', 'ViewEventVenueDetail'],
+  ['view', 'ViewEventVenueCreate'],
+  ['view', 'ViewEventVenueEdit'],
+  ['view', 'ViewEventVenueEvents'],
+]
+```
+
+### Using Permissions in Components
+
+The platform provides multiple ways to check permissions:
+
+#### Using Can Component from CASL
+
+```jsx
+import { Can } from '@casl/react';
+import { AbilityContext } from '../guards/contexts/AbilityContext';
+
+function MyComponent() {
+  return (
+    <Can I="create" a="events">
+      <CreateEventButton />
+    </Can>
+  )
+}
+```
+
+#### Using Ability Context
+
+```jsx
+import { useContext } from 'react';
+import { AbilityContext } from '../guards/contexts/AbilityContext';
+
+function MyComponent() {
+  const ability = useContext(AbilityContext);
+  
+  if (ability.can('create', 'events')) {
+    return <CreateEventButton />;
+  }
+  
+  return null;
+}
+```
+
+## Use Auth Hook
+
+**Location**: `src/guards/authGuard/UseAuth.js`
+
+Custom hook for accessing authentication context:
+
+```javascript
+import useAuth from '../guards/authGuard/UseAuth';
+
+function MyComponent() {
+  const { user, isAuthenticated, signin, logout } = useAuth();
+  
+  // Use authentication state and methods
+}
+```
+
+## Use Mounted Hook
+
+**Location**: `src/guards/authGuard/UseMounted.js`
+
+Utility hook to check if component is still mounted:
+
+```javascript
+import useMounted from '../guards/authGuard/UseMounted';
+
+function MyComponent() {
+  const mounted = useMounted();
+  
+  const fetchData = async () => {
+    const data = await apiCall();
+    
+    if (mounted.current) {
+      // Only update state if component is still mounted
+      setState(data);
+    }
+  };
+}
+```
+
+## Security Features
+
+<CardGroup cols={2}>
+  <Card title="Status Checking" icon="circle-check">
+    User status is verified on each login - inactive users are automatically logged out
+  </Card>
+  <Card title="IP Tracking" icon="location-dot">
+    User IP address and location are recorded for each login
+  </Card>
+  <Card title="Last Access Tracking" icon="clock">
+    Timestamp of last access is updated on each login
+  </Card>
+  <Card title="Permission Guards" icon="shield">
+    Routes and components are protected with permission checks
+  </Card>
+</CardGroup>
+
+### Session Management
+
+- Sessions are maintained using Firebase Auth tokens
+- Tokens are automatically refreshed
+- Invalid tokens result in automatic logout
+- Session expires after period of inactivity
+
+### Password Security
+
+- Minimum 6 characters required
+- Passwords are hashed by Firebase Authentication
+- Password reset via email verification
+- No plaintext password storage
+
+## Authentication Flow
+
+<Steps>
+  <Step title="Login Request">
+    User enters email and password
+  </Step>
+  <Step title="Authentication">
+    Credentials verified with Firebase/Auth0
+  </Step>
+  <Step title="User Data Fetch">
+    User document retrieved from Firestore
+  </Step>
+  <Step title="Status Check">
+    Verify user status is active
+  </Step>
+  <Step title="IP Tracking">
+    Fetch and record user IP and location
+  </Step>
+  <Step title="Setup Loading">
+    Load platform configuration
+  </Step>
+  <Step title="Abilities Loading">
+    Load user permissions based on account type
+  </Step>
+  <Step title="Session Creation">
+    Create authenticated session
+  </Step>
+  <Step title="Redirect">
+    Redirect to dashboard or requested page
+  </Step>
+</Steps>
+
+## Protected Routes Example
+
+```jsx
+import AuthGuard from './guards/authGuard/AuthGuard';
+import PermissionGuard from './guards/authGuard/PermissionGuard';
+
+// Requires authentication
+<Route path="/dashboard" element={
+  <AuthGuard>
+    <Dashboard />
+  </AuthGuard>
+} />
+
+// Requires authentication and permission
+<Route path="/events/create" element={
+  <AuthGuard>
+    <PermissionGuard action="create" subject="events">
+      <CreateEvent />
+    </PermissionGuard>
+  </AuthGuard>
+} />
+```
+
+## Best Practices
+
+<Check>
+  **Authentication Security Best Practices:**
+  - Always use HTTPS in production
+  - Store tokens securely (httpOnly cookies preferred)
+  - Implement proper CORS policies
+  - Regular security audits
+  - Monitor for suspicious login patterns
+  - Implement rate limiting on authentication endpoints
+  - Use environment variables for sensitive credentials
+  - Implement multi-factor authentication for admin roles
+  - Regular permission reviews
+  - Log all authentication events
+</Check>
+
+## Common Permission Subjects
+
+Key permission subjects used throughout the platform:
+
+- `usersStaff`, `usersClients`, `usersCollaborators` - User management
+- `events`, `eventsPreMontaje`, `eventsTickets`, `eventsCredentials` - Event management
+- `EventVenue`, `eventVenues` - Venue management
+- `contracts`, `addendum` - Contract management
+- `eventsStatus`, `ticketsStatus` - Status changes
+- `ViewStaff`, `ViewClients`, `ViewEvents`, etc. - View permissions
+
+## Troubleshooting
+
+<Accordion title="Permission Denied Redirect">
+  **Problem**: User is redirected to `/auth/permissions` when accessing a page
+  
+  **Cause**: User lacks required permission for the action/subject
+  
+  **Solution**:
+  - Verify user's `account_type` is correct
+  - Check permissions in `DefineAbilities.js`
+  - Ensure PermissionGuard is using correct action/subject
+  - Check if user status is active
+</Accordion>
+
+<Accordion title="User Automatically Logged Out">
+  **Problem**: User is logged out immediately after login
+  
+  **Cause**: User status is set to `false` (inactive)
+  
+  **Solution**:
+  - Check user document in Firestore
+  - Verify `status` field is `true`
+  - Update status if user should have access
+</Accordion>
+
+<Accordion title="Social Login Not Working">
+  **Problem**: Google/Facebook/Twitter login fails
+  
+  **Solutions**:
+  - Verify Firebase project has social auth enabled
+  - Check OAuth credentials are configured
+  - Verify redirect URIs are whitelisted
+  - Check browser console for error messages
+</Accordion>
+
+## Related Features
+
+- [User Management](/features/user-management) - User roles and account types
+- [Event Management](/features/event-management) - Event-specific permissions
+- [Venue Management](/features/venue-management) - Venue management permissions
+- [Financial Operations](/features/financial-operations) - Financial permission restrictions

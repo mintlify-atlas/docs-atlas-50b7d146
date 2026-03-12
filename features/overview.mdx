@@ -1,0 +1,170 @@
+---
+title: Core Features Overview
+description: Comprehensive overview of TradeMaster Transactions platform core features
+icon: 'sparkles'
+---
+
+TradeMaster Transactions (TMT) is a comprehensive event management and ticketing platform designed for event organizers, venues, and clients. This section provides an overview of the core features that power the platform.
+
+## Platform Capabilities
+
+TMT offers a complete suite of tools for managing events, users, venues, tickets, and financial operations. The platform is built on Firebase and integrates with modern authentication providers to deliver a secure, scalable SaaS solution.
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users" href="/features/user-management">
+    Multi-role user system supporting Staff, Clients, Collaborators, and Customers with granular permissions
+  </Card>
+  
+  <Card title="Event Management" icon="calendar" href="/features/event-management">
+    Create and manage events with contracts, billing, notifications, and seating arrangements
+  </Card>
+  
+  <Card title="Venue Management" icon="building" href="/features/venue-management">
+    Manage event venues with Seats.io integration for seating charts and zone configuration
+  </Card>
+  
+  <Card title="Ticketing System" icon="ticket" href="/features/ticketing">
+    Complete ticketing solution with QR codes, credentials, and real-time ticket tracking
+  </Card>
+  
+  <Card title="Financial Operations" icon="dollar-sign" href="/features/financial-operations">
+    Transaction management, payouts, and custody accounts with comprehensive financial tracking
+  </Card>
+  
+  <Card title="Authentication & Security" icon="shield" href="/features/authentication">
+    Auth0 and Firebase authentication with JWT tokens and role-based access control
+  </Card>
+</CardGroup>
+
+## System Architecture
+
+The TMT platform is built with:
+
+- **Frontend**: React with Material-UI components
+- **Backend**: Firebase (Firestore, Authentication, Storage)
+- **Authentication**: Auth0 and Firebase Auth with JWT
+- **Permission System**: CASL-based ability management
+- **Integrations**: Seats.io for seating management
+
+## User Roles
+
+The platform supports multiple user roles with different permission levels:
+
+<AccordionGroup>
+  <Accordion title="Staff (Internal Users)">
+    Internal team members with various access levels:
+    - **Administrador**: Full system access
+    - **Coordinador**: Event and client management
+    - **Contador**: Financial and reporting access
+    - **Soporte**: Support and read-only access
+    - **Creador de Sala de Eventos**: Venue management specialist
+  </Accordion>
+  
+  <Accordion title="Clients">
+    Event organizers and promoters who create and manage their own events. Clients have access to:
+    - Their own events and contracts
+    - Financial reports and payouts
+    - Collaborator management
+    - Event settings and ticket sales
+  </Accordion>
+  
+  <Accordion title="Collaborators">
+    Partners who work with Clients on specific events. Limited access based on assigned events.
+  </Accordion>
+  
+  <Accordion title="Customers">
+    End users who purchase tickets. Customer data is collected during ticket purchases and includes:
+    - Order history
+    - Ticket information
+    - Contact details
+  </Accordion>
+</AccordionGroup>
+
+## Key Features by Module
+
+### User Management
+- Multi-role user system (Staff, Clients, Collaborators, Customers)
+- Profile management with image uploads
+- Address and contact information
+- Status management (active/inactive)
+- Document ID verification
+
+### Event Management
+- Event creation with client and contract assignment
+- Event venue and seating chart integration
+- Event date and time management
+- Event status workflow
+- Terms of service documents
+- Event-specific notifications
+- Pre-event setup and configuration
+
+### Venue Management
+- Venue creation and editing
+- Seats.io integration for seating charts
+- Zone and section management
+- Venue capacity tracking
+- Location and address information
+
+### Ticketing
+- Ticket generation and assignment
+- QR code generation with encryption
+- Ticket status management
+- Customer information tracking
+- Credential system for special access
+- Ticket search and query tools
+- Order association
+
+### Financial Operations
+- Transaction listing and details
+- Payout management for clients
+- Custody accounts for fund management
+- Revenue tracking per event
+- Financial adjustments and splits
+- Order and billing management
+
+### Authentication & Permissions
+- Auth0 and Firebase authentication
+- JWT-based session management
+- CASL ability-based permissions
+- Route and component-level guards
+- IP tracking and last access logs
+
+## Data Management
+
+<Note>
+  All data is stored in Firebase Firestore with the following main collections:
+  - `u_staff` - Internal staff users
+  - `u_clients` - Client users
+  - `u_collaborators` - Collaborator users
+  - `u_customers` - Customer/buyer information
+  - `events` - Event data with sub-collections for tickets, credentials, notifications
+  - `event_venues` - Venue information
+  - `transactions` - Financial transactions
+  - `payouts` - Payout accounts
+  - `custody_accounts` - Custody account management
+  - `contracts` and `contracts_legal` - Contract documents
+</Note>
+
+## Getting Started
+
+To understand how each feature works in detail, explore the individual feature documentation:
+
+1. [User Management](/features/user-management) - Learn about user roles and management
+2. [Event Management](/features/event-management) - Create and configure events
+3. [Venue Management](/features/venue-management) - Set up venues and seating
+4. [Ticketing System](/features/ticketing) - Manage tickets and credentials
+5. [Financial Operations](/features/financial-operations) - Handle transactions and payouts
+6. [Authentication](/features/authentication) - Understand security and permissions
+
+## Integration Points
+
+The platform integrates with external services:
+
+- **Seats.io**: Seating chart management and visualization
+- **Firebase Storage**: Image and document storage
+- **Auth0**: Enterprise authentication
+- **IP Geolocation (ipapi.co)**: Location tracking for security
+
+<Warning>
+  This documentation is based on the actual source code implementation. Always refer to the latest codebase for the most up-to-date API signatures and features.
+</Warning>

@@ -1,0 +1,269 @@
+---
+title: 'Authentication State'
+description: 'Redux slice for managing authentication state and user sessions'
+---
+
+## Introduction
+
+The authentication slice manages user authentication status, initialization state, and user profile data. This slice is persisted to localStorage to maintain sessions across page reloads.
+
+## State Structure
+
+The auth slice is defined in `src/store/apps/auth/authSlice.js`.
+
+### Initial State
+
+```javascript
+const initialState = {
+  isAuthenticated: false,
+  isInitialized: false,
+  user: null,
+};
+```
+
+### State Properties
+
+<ParamField path="isAuthenticated" type="boolean" default={false}>
+  Indicates whether a user is currently authenticated
+</ParamField>
+
+<ParamField path="isInitialized" type="boolean" default={false}>
+  Indicates whether the authentication system has completed initialization. Used to prevent rendering before auth state is loaded.
+</ParamField>
+
+<ParamField path="user" type="object | null" default={null}>
+  The authenticated user object containing profile and metadata. Contains:
+  - User profile information
+  - Role and permissions
+  - Date metadata (last_update, last_access)
+</ParamField>
+
+## Actions
+
+### authStateChanged
+
+Updates the authentication state when a user logs in, logs out, or when auth state is restored from persistence.
+
+```javascript
+import { authStateChanged } from './store/apps/auth/authSlice';
+
+// Dispatch auth state change
+dispatch(authStateChanged({
+  isAuthenticated: true,
+  user: {
+    uid: 'user123',
+    email: 'user@example.com',
+    role: 'staff',
+    date: {
+      last_update: timestampObject,
+      last_access: timestampObject
+    }
+  }
+}));
+```
+
+#### Payload Properties
+
+<ParamField path="isAuthenticated" type="boolean" required>
+  Authentication status
+</ParamField>
+
+<ParamField path="user" type="object | null" required>
+  User object with profile data, or null for logout
+</ParamField>
+
+## Timestamp Conversion
+
+The auth slice automatically converts Firebase timestamps to readable date strings:
+
+```javascript
+const convertTimestamp = (timestamp) => {
+  if (timestamp && timestamp.seconds) {
+    const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+    return moment(date).format('DD/MM/YYYY - hh:mm:ss a');
+  }
+  return null;
+};
+
+user.date.last_update = convertTimestamp(user.date?.last_update);
+user.date.last_access = convertTimestamp(user.date?.last_access);
+```
+
+### Converted Date Format
+
+Timestamps are converted to: `DD/MM/YYYY - hh:mm:ss a`
+
+Example: `12/03/2026 - 02:30:45 pm`
+
+## Usage Examples
+
+### Selecting Auth State
+
+```javascript
+import { useSelector } from 'react-redux';
+
+function ProtectedComponent() {
+  const { isAuthenticated, isInitialized, user } = useSelector(
+    (state) => state.auth
+  );
+
+  if (!isInitialized) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {user.name}</h1>
+      <p>Last access: {user.date.last_access}</p>
+    </div>
+  );
+}
+```
+
+### Checking User Role
+
+```javascript
+import { useSelector } from 'react-redux';
+
+function AdminPanel() {
+  const user = useSelector((state) => state.auth.user);
+
+  if (user?.role !== 'admin') {
+    return <AccessDenied />;
+  }
+
+  return <AdminDashboard />;
+}
+```
+
+### Login Flow
+
+```javascript
+import { useDispatch } from 'react-redux';
+import { authStateChanged } from './store/apps/auth/authSlice';
+import { auth } from './firebase/Firebase';
+
+function useLogin() {
+  const dispatch = useDispatch();
+
+  const login = async (email, password) => {
+    try {
+      // Firebase authentication
+      const userCredential = await auth.signInWithEmailAndPassword(
+        email,
+        password
+      );
+
+      // Fetch user profile from Firestore
+      const userDoc = await Firestore.collection('users')
+        .doc(userCredential.user.uid)
+        .get();
+
+      // Update Redux state
+      dispatch(authStateChanged({
+        isAuthenticated: true,
+        user: {
+          uid: userCredential.user.uid,
+          ...userDoc.data()
+        }
+      }));
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  };
+
+  return { login };
+}
+```
+
+### Logout Flow
+
+```javascript
+import { useDispatch } from 'react-redux';
+import { authStateChanged } from './store/apps/auth/authSlice';
+import { auth } from './firebase/Firebase';
+
+function useLogout() {
+  const dispatch = useDispatch();
+
+  const logout = async () => {
+    try {
+      await auth.signOut();
+      
+      dispatch(authStateChanged({
+        isAuthenticated: false,
+        user: null
+      }));
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  return { logout };
+}
+```
+
+## Persistence
+
+The auth slice is included in the Redux Persist whitelist, meaning authentication state is automatically saved to localStorage and restored on app initialization.
+
+```javascript
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['auth', 'customizer', 'setup']
+};
+```
+
+This allows users to remain logged in across:
+- Page refreshes
+- Browser restarts
+- Tab closures
+
+## Security Considerations
+
+- **Token Storage**: Ensure authentication tokens are stored securely
+- **Session Timeout**: Implement session timeout logic in your authentication guard
+- **Sensitive Data**: Avoid storing sensitive information in Redux state
+- **State Cleanup**: Always clear auth state on logout to prevent data leaks
+
+## Integration with Firebase
+
+The auth slice works in conjunction with Firebase Authentication:
+
+```javascript
+import { auth, Firestore } from './guards/firebase/Firebase';
+
+// Listen for auth state changes
+auth.onAuthStateChanged(async (firebaseUser) => {
+  if (firebaseUser) {
+    const userDoc = await Firestore.collection('users')
+      .doc(firebaseUser.uid)
+      .get();
+    
+    dispatch(authStateChanged({
+      isAuthenticated: true,
+      user: {
+        uid: firebaseUser.uid,
+        ...userDoc.data()
+      }
+    }));
+  } else {
+    dispatch(authStateChanged({
+      isAuthenticated: false,
+      user: null
+    }));
+  }
+});
+```
+
+## Related Resources
+
+- [Store Overview](/api/store/overview)
+- [Application State Slices](/api/store/apps)
+- [Authentication Features](/features/authentication)

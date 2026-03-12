@@ -1,0 +1,445 @@
+---
+title: 'Authentication Guards'
+description: 'Route protection and permission-based access control guards'
+---
+
+## Overview
+
+The TMT platform uses guard components to protect routes and control access based on authentication status and user permissions. Guards are React components that wrap protected routes and redirect users based on authorization rules.
+
+## AuthGuard
+
+Protects routes that require authentication. Redirects unauthenticated users to the login page.
+
+### Props
+
+<ParamField path="children" type="ReactNode" required>
+  The component(s) to render if the user is authenticated
+</ParamField>
+
+### Behavior
+
+- Checks if the user is authenticated using the `useAuth()` hook
+- If not authenticated, redirects to `/auth/login`
+- If authenticated, renders the child components
+- Uses `replace: true` to prevent back navigation to protected route after logout
+
+### Usage
+
+```javascript
+import AuthGuard from 'guards/authGuard/AuthGuard';
+import Dashboard from 'views/Dashboard';
+
+const ProtectedRoute = () => {
+  return (
+    <AuthGuard>
+      <Dashboard />
+    </AuthGuard>
+  );
+};
+```
+
+### Route Configuration
+
+```javascript
+import { Routes, Route } from 'react-router-dom';
+import AuthGuard from 'guards/authGuard/AuthGuard';
+import Dashboard from 'views/Dashboard';
+import Events from 'views/Events';
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={
+        <AuthGuard>
+          <Dashboard />
+        </AuthGuard>
+      } />
+      <Route path="/events" element={
+        <AuthGuard>
+          <Events />
+        </AuthGuard>
+      } />
+    </Routes>
+  );
+}
+```
+
+**Source:** `src/guards/authGuard/AuthGuard.js:5-18`
+
+## GuestGuard
+
+Protects routes that should only be accessible to unauthenticated users (e.g., login, register pages). Redirects authenticated users to the home page.
+
+### Props
+
+<ParamField path="children" type="ReactNode" required>
+  The component(s) to render if the user is NOT authenticated
+</ParamField>
+
+### Behavior
+
+- Checks if the user is authenticated using the `useAuth()` hook
+- If authenticated, redirects to `/` (home page)
+- If not authenticated, renders the child components
+- Uses `replace: true` to prevent navigation issues
+
+### Usage
+
+```javascript
+import GuestGuard from 'guards/authGuard/GuestGaurd';
+import Login from 'views/auth/Login';
+import Register from 'views/auth/Register';
+
+const AuthRoute = () => {
+  return (
+    <GuestGuard>
+      <Login />
+    </GuestGuard>
+  );
+};
+```
+
+### Route Configuration
+
+```javascript
+import { Routes, Route } from 'react-router-dom';
+import GuestGuard from 'guards/authGuard/GuestGaurd';
+import Login from 'views/auth/Login';
+import Register from 'views/auth/Register';
+
+function AuthRoutes() {
+  return (
+    <Routes>
+      <Route path="/auth/login" element={
+        <GuestGuard>
+          <Login />
+        </GuestGuard>
+      } />
+      <Route path="/auth/register" element={
+        <GuestGuard>
+          <Register />
+        </GuestGuard>
+      } />
+    </Routes>
+  );
+}
+```
+
+**Source:** `src/guards/authGuard/GuestGaurd.js:5-18`
+
+## PermissionGuard
+
+Enforces permission-based access control using CASL abilities. Redirects users without required permissions to a permission denied page.
+
+### Props
+
+<ParamField path="children" type="ReactNode" required>
+  The component(s) to render if the user has the required permission
+</ParamField>
+
+<ParamField path="action" type="string" required>
+  The action to check permission for (e.g., 'view', 'create', 'edit', 'delete')
+</ParamField>
+
+<ParamField path="subject" type="string" required>
+  The subject/resource to check permission against (e.g., 'ViewEvents', 'usersStaff')
+</ParamField>
+
+### Behavior
+
+- Uses CASL `AbilityContext` to check user permissions
+- If `ability.can(action, subject)` returns false, redirects to `/auth/permissions`
+- If user has permission, renders the child components
+- Uses `replace: true` to prevent back navigation
+
+### Usage
+
+```javascript
+import PermissionGuard from 'guards/authGuard/PermissionGuard';
+import EventCreate from 'views/events/EventCreate';
+
+const CreateEventRoute = () => {
+  return (
+    <PermissionGuard action="create" subject="events">
+      <EventCreate />
+    </PermissionGuard>
+  );
+};
+```
+
+### Multiple Permissions
+
+```javascript
+import PermissionGuard from 'guards/authGuard/PermissionGuard';
+import StaffManagement from 'views/staff/StaffManagement';
+
+const StaffRoute = () => {
+  return (
+    <PermissionGuard action="view" subject="ViewStaff">
+      <StaffManagement />
+    </PermissionGuard>
+  );
+};
+```
+
+### Combining Guards
+
+```javascript
+import AuthGuard from 'guards/authGuard/AuthGuard';
+import PermissionGuard from 'guards/authGuard/PermissionGuard';
+import TicketManagement from 'views/tickets/TicketManagement';
+
+const SecureTicketRoute = () => {
+  return (
+    <AuthGuard>
+      <PermissionGuard action="view" subject="ViewTickets">
+        <TicketManagement />
+      </PermissionGuard>
+    </AuthGuard>
+  );
+};
+```
+
+**Source:** `src/guards/authGuard/PermissionGuard.js:5-18`
+
+## useAuth Hook
+
+Custom hook that provides access to the authentication context.
+
+### Returns
+
+**Type:** `AuthContextType`
+
+Returns the authentication context containing:
+- `isAuthenticated`: Boolean indicating if user is logged in
+- `user`: Current user object with account details
+- `login()`: Function to authenticate user
+- `logout()`: Function to sign out user
+- Other authentication-related methods
+
+### Usage
+
+```javascript
+import useAuth from 'guards/authGuard/UseAuth';
+
+function UserProfile() {
+  const { isAuthenticated, user, logout } = useAuth();
+
+  if (!isAuthenticated) {
+    return <div>Please log in</div>;
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {user.name}</h1>
+      <button onClick={logout}>Sign Out</button>
+    </div>
+  );
+}
+```
+
+### In Components
+
+```javascript
+import useAuth from 'guards/authGuard/UseAuth';
+
+function NavigationMenu() {
+  const { isAuthenticated, user } = useAuth();
+
+  return (
+    <nav>
+      {isAuthenticated ? (
+        <>
+          <span>Logged in as: {user.email}</span>
+          <span>Role: {user.account_type}</span>
+        </>
+      ) : (
+        <a href="/auth/login">Login</a>
+      )}
+    </nav>
+  );
+}
+```
+
+**Source:** `src/guards/authGuard/UseAuth.js:7`
+
+## Permission System
+
+### defineAbilitiesFor()
+
+Defines user abilities based on their account type using CASL.
+
+<ParamField path="user" type="object" required>
+  User object containing `account_type` property
+</ParamField>
+
+**Returns:** `Ability` - CASL Ability instance with defined permissions
+
+### Account Types
+
+The system supports the following account types with different permission levels:
+
+- **Administrador**: Full access to all features (`manage all`)
+- **Coordinador**: Can manage clients, collaborators, events, contracts, and venues
+- **Contador**: Limited to viewing contracts, events, and client information
+- **Soporte**: Support role with read-only access to most resources
+- **Creador de Sala de Eventos**: Can create and manage event venues
+
+### Permission Actions
+
+- `view`: View a page or component
+- `read`: Read data
+- `create`: Create new resources
+- `edit`: Modify existing resources
+- `delete`: Remove resources
+- `change`: Change status or state
+- `manage`: Full control (admin only)
+
+### Permission Subjects
+
+Common subjects include:
+- `ViewStaff`, `ViewClients`, `ViewCollaborators`: User management views
+- `events`, `eventsTickets`, `eventsCredentials`: Event management
+- `contracts`, `addendum`: Contract management
+- `EventVenue`: Venue management
+- `ViewTickets`: Ticket viewing
+- `ViewPayouts`: Financial payouts
+
+### Usage with Context
+
+```javascript
+import React from 'react';
+import { AbilityContext } from 'guards/contexts/AbilityContext';
+import useAuth from 'guards/authGuard/UseAuth';
+
+function EventActions() {
+  const ability = React.useContext(AbilityContext);
+  const { user } = useAuth();
+
+  return (
+    <div>
+      {ability.can('create', 'events') && (
+        <button>Create Event</button>
+      )}
+      {ability.can('edit', 'events') && (
+        <button>Edit Event</button>
+      )}
+      {ability.can('change', 'eventsStatus') && (
+        <button>Change Status</button>
+      )}
+    </div>
+  );
+}
+```
+
+### Programmatic Permission Check
+
+```javascript
+import React from 'react';
+import { AbilityContext } from 'guards/contexts/AbilityContext';
+
+function TicketList() {
+  const ability = React.useContext(AbilityContext);
+
+  const handleDeleteTicket = (ticketId) => {
+    if (!ability.can('delete', 'tickets')) {
+      alert('You do not have permission to delete tickets');
+      return;
+    }
+    // Proceed with deletion
+  };
+
+  return <div>{/* Ticket list */}</div>;
+}
+```
+
+**Source:** `src/guards/contexts/DefineAbilities.js:3-298`
+
+## AbilityContext
+
+React context for sharing CASL ability instance across the application.
+
+### Default Value
+
+```javascript
+new Ability() // Empty ability with no permissions
+```
+
+### Usage
+
+```javascript
+import React from 'react';
+import { AbilityContext } from 'guards/contexts/AbilityContext';
+import { defineAbilitiesFor } from 'guards/contexts/DefineAbilities';
+
+function App() {
+  const { user } = useAuth();
+  const ability = defineAbilitiesFor(user);
+
+  return (
+    <AbilityContext.Provider value={ability}>
+      {/* Your app components */}
+    </AbilityContext.Provider>
+  );
+}
+```
+
+**Source:** `src/guards/contexts/AbilityContext.js:4`
+
+## Best Practices
+
+### Always Combine Guards
+
+For maximum security, combine authentication and permission guards:
+
+```javascript
+<AuthGuard>
+  <PermissionGuard action="view" subject="ViewEvents">
+    <EventsPage />
+  </PermissionGuard>
+</AuthGuard>
+```
+
+### Check Permissions in Components
+
+Always verify permissions before showing UI elements:
+
+```javascript
+const ability = React.useContext(AbilityContext);
+
+return (
+  <div>
+    {ability.can('create', 'events') && <CreateButton />}
+    {ability.can('edit', 'events') && <EditButton />}
+  </div>
+);
+```
+
+### Server-Side Validation
+
+Client-side guards are not sufficient for security. Always validate permissions on the server:
+
+```javascript
+// Client-side (guards provide UX)
+<PermissionGuard action="delete" subject="tickets">
+  <DeleteButton />
+</PermissionGuard>
+
+// Server-side (guards provide security)
+// API must also check user.can('delete', 'tickets')
+```
+
+### Handle Missing Permissions Gracefully
+
+```javascript
+const ability = React.useContext(AbilityContext);
+
+const handleAction = () => {
+  if (!ability.can('edit', 'events')) {
+    showNotification('You do not have permission to edit events');
+    return;
+  }
+  // Proceed with action
+};
+```

@@ -1,0 +1,185 @@
+---
+title: Managing Transactions
+description: Track and manage financial transactions in TradeMaster Transactions
+---
+
+# Managing Transactions
+
+Transactions in TMT represent the financial operations associated with event ticket purchases. Each transaction is automatically created when an order is processed and captures critical payment information.
+
+## Overview
+
+Transactions are stored in the `orders_transactions` Firestore collection and contain comprehensive details about:
+
+- Payment method used
+- Amount and currency
+- Associated event and order
+- Client information
+- Box office (taquilla) details
+- Exchange rates for multi-currency transactions
+
+## Transaction Data Structure
+
+Each transaction contains the following fields:
+
+```javascript
+{
+  id: string,                    // Transaction ID
+  order_id: string,              // Associated order ID
+  event_name: string,            // Name of the event
+  payment_name: string,          // Payment method name
+  office_name: string,           // Box office name
+  client_name: string,           // Customer name
+  amount: number,                // Transaction amount in USD
+  amount_currency: string,       // Currency code (USD, VEF)
+  amount_exchange: number,       // Amount in local currency
+  amount_exchange_rate: number,  // Exchange rate applied
+  date: {
+    created: Timestamp,          // Creation timestamp
+    updated: Timestamp           // Last update timestamp
+  }
+}
+```
+
+## Viewing Transactions
+
+<Steps>
+  <Step title="Access Transaction List">
+    Navigate to the Transactions section from the main menu. The transaction list displays all financial operations with key details:
+    
+    - Event name and transaction ID
+    - Payment method
+    - Box office location
+    - Transaction amount
+    
+    Source: `src/views/transactions/TransactionsList.js`
+  </Step>
+
+  <Step title="Search and Filter">
+    Use the search bar to filter transactions by:
+    
+    - Event name
+    - Payment method
+    - Box office name
+    - Amount
+    
+    The search supports real-time filtering across all visible fields.
+    
+    Implementation: `src/components/apps/transactions/TransactionsTable.js:27-34`
+  </Step>
+
+  <Step title="View Transaction Details">
+    Click on any transaction row or the eye icon to view complete details including:
+    
+    - Full transaction information
+    - Payment details with currency conversion
+    - Associated order information
+    - Client details
+    
+    Source: `src/views/transactions/DisplayTransaction.js`
+  </Step>
+</Steps>
+
+## Multi-Currency Support
+
+TMT handles transactions in multiple currencies with automatic conversion:
+
+### VEF (Venezuelan Bolívar) Transactions
+
+When `amount_currency` is set to "VEF":
+
+- `amount_exchange`: Amount in Bolívares
+- `amount`: Equivalent amount in USD
+- `amount_exchange_rate`: Current exchange rate
+
+```javascript
+// Display logic from TransactionDetail.js:186-202
+if (transaction.amount_currency === 'VEF') {
+  primaryAmount = `Bs. ${transaction.amount_exchange.toFixed(2)}`
+  equivalentUSD = `$${transaction.amount.toFixed(2)}`
+  exchangeRate = `Bs. ${transaction.amount_exchange_rate.toFixed(2)}`
+}
+```
+
+### USD Transactions
+
+For USD transactions:
+- `amount`: Direct USD amount
+- No exchange rate or conversion needed
+
+## Exporting Transaction Data
+
+Export transactions to CSV for external analysis:
+
+<Steps>
+  <Step title="Access Export Function">
+    Click the download icon in the transaction list toolbar.
+    
+    Source: `src/components/apps/transactions/TransactionsTable.js:214-226`
+  </Step>
+
+  <Step title="CSV Generation">
+    The system exports all visible columns including:
+    - Event name and ID
+    - Payment method
+    - Office name
+    - Transaction amount
+  </Step>
+</Steps>
+
+<Warning>
+  Transaction records are immutable once created. Any corrections must be handled through adjustments in the conciliation process.
+</Warning>
+
+## Linking to Orders
+
+Each transaction is linked to its originating order:
+
+```javascript
+// From TransactionDetail.js:126-130
+<Button
+  variant="contained"
+  onClick={() => navigate(`/ordenes-detalle?id=${orderId}`)}
+>
+  Ver Detalles de la Orden Asociada
+</Button>
+```
+
+This allows you to:
+- View the complete order details
+- See all tickets purchased
+- Access customer information
+- Track order status
+
+## API Integration
+
+Transactions are retrieved through the Redux store:
+
+```javascript
+// From transactionsSlice.js:35-66
+export const fetchTransactions = () => async (dispatch) => {
+  const querySnapshot = await Firestore
+    .collection('orders_transactions')
+    .get();
+  
+  const TransactionsArray = querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  
+  dispatch(getTransactions(TransactionsArray));
+};
+```
+
+## Best Practices
+
+1. **Regular Reconciliation**: Cross-reference transactions with custody account movements
+2. **Currency Validation**: Always verify exchange rates for VEF transactions
+3. **Order Verification**: Check the associated order for complete context
+4. **Export for Analysis**: Use CSV exports for financial reporting and analysis
+
+## Related Sections
+
+- [Payment Methods](/guides/financial/payment-methods) - Configure payment methods for transactions
+- [Custody Accounts](/guides/financial/custody-accounts) - Manage destination accounts
+- [Conciliations](/guides/financial/conciliations) - Reconcile transactions with bank records

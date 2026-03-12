@@ -1,0 +1,461 @@
+---
+title: Custody Account Operations
+description: Manage custody accounts for fund collection and reconciliation
+---
+
+# Custody Account Operations
+
+Custody accounts in TMT serve as intermediate holding accounts where customer payments are collected before disbursement. They are essential for financial reconciliation and tracking fund flows.
+
+## Overview
+
+Custody accounts are stored in the `custody_accounts` Firestore collection and represent:
+
+- Bank accounts or digital wallets
+- Payment collection points
+- Balance tracking mechanisms
+- Reconciliation checkpoints
+
+## Custody Account Structure
+
+```javascript
+{
+  name: string,                      // Account name
+  type: string,                      // Account type (digital, cash, check)
+  currency: string,                  // Currency code (USD, VEF)
+  country: string,                   // Country code
+  balance_available: number,         // Available balance
+  balance_pending: number,           // Pending balance
+  opening_balance: number,           // Initial balance
+  opening_balance_available: boolean, // Can use opening balance
+  client: {
+    client_id: string,               // Client ID
+    name: string                     // Client name
+  },
+  manager: {
+    name: string,                    // Account manager name
+    email: string,                   // Manager email
+    phone: string                    // Manager phone
+  },
+  metadata: {
+    bank: Object,                    // Bank information
+    account_number: string,          // Account number
+    account_type: Object             // Account type
+  },
+  status: boolean,                   // Active/inactive
+  date: {
+    created: Timestamp,              // Creation timestamp
+    updated: Timestamp               // Last update timestamp
+  }
+}
+```
+
+## Creating Custody Accounts
+
+<Steps>
+  <Step title="Navigate to Custody Accounts">
+    Access the custody accounts section and click "Crear Cuenta Custodio" (Create Custody Account).
+    
+    Source: `src/views/custody-accounts/NewCustodyAccounts.js`
+  </Step>
+
+  <Step title="Enter Account Name">
+    Provide a descriptive name for the custody account:
+    
+    ```javascript
+    // Validation from CustodyAccountForm.js:47
+    name: Yup.string().required('Nombre es requerido')
+    ```
+    
+    Example: "TMT USD Collection - Bank of America"
+  </Step>
+
+  <Step title="Select Account Type">
+    Choose the account type:
+    
+    - **Digital**: Electronic bank accounts, digital wallets
+    - **Cash**: Physical cash collection points
+    - **Check**: Check deposit accounts
+    
+    ```javascript
+    // From CustodyAccountForm.js:48
+    type: Yup.string().required('Tipo de Pago es requerido')
+    ```
+  </Step>
+
+  <Step title="Select Currency and Country">
+    Configure the account's currency and country:
+    
+    ```javascript
+    // Validation
+    currency: Yup.string().required('Moneda es requerido')
+    country: Yup.string().required('País es requerido')
+    ```
+    
+    Available currencies are loaded from setup configuration.
+  </Step>
+
+  <Step title="Assign Client">
+    Select the client that owns this custody account:
+    
+    ```javascript
+    // From CustodyAccountForm.js:32-40
+    const fetchClients = async () => {
+      const fireQuery = await Firestore.collection('u_clients').get();
+      const finalClients = [
+        { name: "TradeMaster Transactions", client_id: "TMT" },
+        ...fireQuery.docs.map(doc => ({
+          name: doc.data().name,
+          client_id: doc.id
+        }))
+      ];
+      setClients(finalClients);
+    };
+    ```
+  </Step>
+
+  <Step title="Configure Bank Details (for Venezuelan accounts)">
+    For Venezuelan accounts (`country.code === 've'`), provide:
+    
+    **Bank Name**: Select from Venezuelan banks
+    ```javascript
+    bank_name: Yup.object()
+      .when('country', {
+        is: (country) => (country && country.code === 've'),
+        then: Yup.object().required('Nombre del banco es requerido')
+      })
+    ```
+    
+    **Account Number**: 16+ digit account number
+    ```javascript
+    account_number: Yup.string()
+      .when('country', {
+        is: (country) => (country && country.code === 've'),
+        then: Yup.string()
+          .required('Número de cuenta es requerido')
+          .matches(/^\d+$/, "El número de cuenta debe contener solo números")
+          .min(16, "16 dígitos como mínimo")
+      })
+    ```
+    
+    **Account Type**: Checking, savings, etc.
+    ```javascript
+    account_type: Yup.object()
+      .when('country', {
+        is: (country) => (country && country.code === 've'),
+        then: Yup.object().required('Tipo de cuenta es requerido')
+      })
+    ```
+    
+    **Opening Balance**: Initial account balance
+    ```javascript
+    opening_balance: Yup.string()
+      .when('country', {
+        is: (country) => (country && country.code === 've'),
+        then: Yup.string()
+          .required('El balance inicial de su cuenta es requerido')
+      })
+    ```
+    
+    Source: `src/components/apps/custody-accounts/CustodyAccountForm.js:52-74`
+  </Step>
+
+  <Step title="Set Manager Information">
+    Configure the account manager details:
+    
+    **Manager Name**:
+    ```javascript
+    manager_name: Yup.string()
+      .required('Nombre del encargado es requerido')
+    ```
+    
+    **Manager Email**:
+    ```javascript
+    manager_email: Yup.string()
+      .email('El correo electrónico es invalido')
+      .required('Email del encargado es requerido')
+    ```
+    
+    **Manager Phone**: Validated international phone number
+    ```javascript
+    manager_phone: Yup.string()
+      .required('Teléfono del encargado es requerido')
+      .test('is-valid-phone', 'Ingrese un teléfono válido', (value) => {
+        return matchIsValidTel(value);
+      })
+    ```
+    
+    Source: `src/components/apps/custody-accounts/CustodyAccountForm.js:75-82`
+  </Step>
+
+  <Step title="Save Custody Account">
+    Submit the form to create the custody account:
+    
+    ```javascript
+    // From CustodyAccountForm.js:104-150
+    const clientObject = clients.find(c => c.client_id === values.client);
+    
+    let toSend = {
+      balance_available: 0,
+      balance_pending: 0,
+      opening_balance: Number(values.opening_balance),
+      country: values.country,
+      currency: values.currency,
+      date: {
+        created: firebase.firestore.FieldValue.serverTimestamp(),
+        updated: ''
+      },
+      manager: {
+        email: values.manager_email,
+        name: values.manager_name,
+        phone: values.manager_phone
+      },
+      metadata: {
+        bank: values.bank_name?.name ?? {},
+        account_number: values.account_number,
+        account_type: values.account_type?.name ?? {}
+      },
+      name: values.name,
+      status: true,
+      opening_balance_available: false,
+      type: values.type,
+      client: clientObject
+    };
+    
+    await Firestore.collection('custody_accounts').add(toSend);
+    ```
+  </Step>
+</Steps>
+
+## Balance Management
+
+Custody accounts track three types of balances:
+
+### Available Balance
+
+Funds available for withdrawal or disbursement:
+
+```javascript
+balance_available: number  // Current available balance
+```
+
+Updated when:
+- Transactions are confirmed
+- Payouts are processed
+- Reconciliations are completed
+
+### Pending Balance
+
+Funds awaiting confirmation:
+
+```javascript
+balance_pending: number  // Pending transactions
+```
+
+Used for:
+- Unconfirmed bank transfers
+- Processing transactions
+- Pending reconciliations
+
+### Opening Balance
+
+Initial account balance:
+
+```javascript
+opening_balance: number  // Initial balance
+opening_balance_available: boolean  // Can use opening balance
+```
+
+<Warning>
+  The opening balance should only be set once during account creation. Changes to the opening balance affect all historical reconciliation calculations.
+</Warning>
+
+## Viewing Account Details
+
+Access comprehensive custody account information:
+
+```javascript
+// From CustodyAccountsDisplay.js:20-36
+const DisplayTransaction = () => {
+  return (
+    <PageContainer title="Detalles de la Cuenta Custodio">
+      <ParentCard title='Detalles de la Cuenta Custodio'>
+        <CustodyAccountsDetail />
+      </ParentCard>
+    </PageContainer>
+  );
+};
+```
+
+The detail view shows:
+- Account name and status
+- Balance information (available, pending, opening)
+- Bank and account details
+- Manager contact information
+- Client assignment
+- Transaction history
+- Associated payment methods
+
+## Viewing Order Details
+
+Custody accounts can display associated order details:
+
+```javascript
+// From CustodyAccountOrderDetail.js:20-36
+const DisplayTransaction = () => {
+  return (
+    <PageContainer title="Detalles del Orden">
+      <ParentCard title='Detalles del Orden'>
+        <CustodyAccountOrderDetail />
+      </ParentCard>
+    </PageContainer>
+  );
+};
+```
+
+Source: `src/views/custody-accounts/CustodyAccountOrderDetail.js`
+
+## Editing Custody Accounts
+
+<Steps>
+  <Step title="Access Account Settings">
+    Navigate to the custody accounts list and select the account to edit.
+    
+    Source: `src/views/custody-accounts/EditCustodyAccounts.js`
+  </Step>
+
+  <Step title="Update Account Information">
+    Modify fields such as:
+    - Account name
+    - Manager information
+    - Bank details (if applicable)
+    - Status
+    
+    <Warning>
+      Do not change: type, currency, country, or client assignment. These affect payment method linking and reconciliation.
+    </Warning>
+  </Step>
+
+  <Step title="Save Changes">
+    Submit the updates. The system updates the timestamp:
+    
+    ```javascript
+    date: {
+      created: originalTimestamp,
+      updated: firebase.firestore.FieldValue.serverTimestamp()
+    }
+    ```
+  </Step>
+</Steps>
+
+## Account Types and Country Rules
+
+### Venezuelan Accounts (ve)
+
+Require complete bank information:
+- Bank name from approved list
+- 16+ digit account number
+- Account type specification
+- Opening balance
+
+### International Accounts
+
+More flexible requirements:
+- Bank details optional
+- Account number format varies
+- Opening balance optional
+
+## Integration with Payment Methods
+
+Custody accounts are linked to payment methods:
+
+```javascript
+// Payment methods reference custody accounts
+payment_method = {
+  name: "Zelle - TMT USD",
+  custody_account: {
+    id: "custody_account_id",
+    name: "TMT USD Collection - Bank of America"
+  },
+  // ... other fields
+}
+```
+
+When a transaction uses a payment method:
+1. Funds are recorded to the linked custody account
+2. Balance is updated (available or pending)
+3. Transaction is tracked for reconciliation
+
+## Manager Responsibilities
+
+The account manager is responsible for:
+
+- Monitoring account balances
+- Reconciling bank statements
+- Processing withdrawals
+- Reporting discrepancies
+- Maintaining account access
+
+## Account Status Management
+
+Control account availability:
+
+- **Active** (`status: true`): Accepts new transactions
+- **Inactive** (`status: false`): No new transactions
+
+Deactivate accounts for:
+- Account closure
+- Temporary suspension
+- Security issues
+- Compliance holds
+
+<Warning>
+  Deactivating a custody account prevents new transactions but does not affect existing balances or historical records.
+</Warning>
+
+## Reconciliation Integration
+
+Custody accounts are central to the reconciliation process:
+
+```javascript
+// From SummaryConciliations.js:28-30
+const querySnapshot = await Firestore.collection('custody_accounts')
+  .where("country", "==", "ve")
+  .where("currency", "==", "VEF")
+  .where("type", "==", "digital")
+  .get();
+```
+
+Reconciliation compares:
+- Custody account balance (system)
+- Bank statement balance (external)
+- Transaction records (both sources)
+
+## Best Practices
+
+1. **Accurate Setup**: Verify all bank details during creation
+2. **Single Purpose**: One custody account per bank account/payment method combination
+3. **Regular Monitoring**: Check balances daily
+4. **Prompt Reconciliation**: Reconcile at least monthly
+5. **Manager Access**: Ensure manager has actual account access
+6. **Balance Verification**: Confirm opening balance matches bank records
+7. **Documentation**: Keep external records of account credentials
+
+## Account Naming Convention
+
+Use consistent naming for easy identification:
+
+```
+[Client] [Currency] [Type] - [Bank/Provider]
+```
+
+Examples:
+- "TMT USD Digital - Bank of America"
+- "EventCo VEF Digital - Banco Mercantil"
+- "TMT Cash Collection - Main Office"
+
+## Related Sections
+
+- [Payment Methods](/guides/financial/payment-methods) - Link payment methods to custody accounts
+- [Transactions](/guides/financial/transactions) - View transactions by custody account
+- [Conciliations](/guides/financial/conciliations) - Reconcile custody account balances

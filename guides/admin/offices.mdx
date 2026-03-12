@@ -1,0 +1,289 @@
+---
+title: Office Management
+description: Create and manage ticket offices (taquillas) and track sales across locations
+---
+
+The Office Management system enables administrators to create and configure ticket offices (taquillas), manage staff assignments, set operating schedules, and track sales performance across all locations.
+
+## Office Types
+
+TMT supports two types of offices:
+
+- **Physical Offices**: Brick-and-mortar locations with physical addresses
+- **Virtual Offices**: Online ticket offices for web-based sales
+
+## Creating a New Office
+
+<Steps>
+  <Step title="Navigate to Office Management">
+    Go to the offices section and click "Crear Taquilla" (Create Office).
+  </Step>
+  
+  <Step title="Configure Basic Information">
+    Enter the office details:
+    
+    **Required Fields:**
+    - **Name**: Office name or location identifier
+    - **Type**: Select "Física" (Physical) or "Virtual"
+    - **Country**: Select from available countries
+    - **City**: City where the office is located
+    - **Postal Code**: ZIP or postal code
+    - **Client/Producer**: Select the client who owns this office
+  </Step>
+  
+  <Step title="Set Payment Methods">
+    Select the payment methods available at this office.
+    
+    <Note>
+      Payment methods are filtered based on the selected client. Each client has specific payment configurations.
+    </Note>
+    
+    The system automatically loads payment methods from the `payments_methods` collection with the following data:
+    - Payment method name
+    - Currency (USD, VES, etc.)
+    - Custody account information
+    - Processing percentages
+  </Step>
+  
+  <Step title="Add Address Details">
+    Provide the complete address:
+    
+    - **Detailed Address**: Full street address, building number, and additional location information
+    
+    This information is stored in the `address` object:
+    ```javascript
+    address: {
+      country: { name: "Venezuela", code: "VE" },
+      city: "Caracas",
+      zipcode: "1010",
+      line: "Av. Principal, Edificio Torre A, Piso 5"
+    }
+    ```
+  </Step>
+  
+  <Step title="Assign Staff Members">
+    Configure the office team:
+    
+    **Taquilleros (Ticket Sellers)**
+    - Select one or more ticket sellers from active collaborators
+    - Must have account type: "Taquillero", "Administrador", or "Jefe de Taquilla"
+    
+    **Administradores (Administrators)**
+    - Select office administrators
+    - Must have account type: "Administrador" or "Jefe de Taquilla"
+    
+    <Warning>
+      At least one taquillero and one administrator are required to create an office.
+    </Warning>
+  </Step>
+  
+  <Step title="Set Operating Hours (Physical Offices Only)">
+    For physical offices, configure the weekly schedule:
+    
+    - Check the days the office is open
+    - Set opening and closing times for each day
+    - Use 12-hour format with AM/PM
+    
+    Example schedule:
+    ```
+    Monday: 9:00 AM - 6:00 PM
+    Tuesday: 9:00 AM - 6:00 PM
+    Wednesday: 9:00 AM - 6:00 PM
+    Thursday: 9:00 AM - 6:00 PM
+    Friday: 9:00 AM - 6:00 PM
+    Saturday: 10:00 AM - 2:00 PM
+    Sunday: Closed
+    ```
+  </Step>
+  
+  <Step title="Save Office Configuration">
+    Click "Guardar" (Save) to create the office. The system will:
+    
+    - Create the office document in the `offices` collection
+    - Set up payment method subcollection
+    - Create collaborator associations
+    - Link collaborators to the office in their user profiles
+  </Step>
+</Steps>
+
+## Office Data Structure
+
+Created offices are stored with the following structure:
+
+```javascript
+{
+  name: "Office Name",
+  office_type: "Física" | "Virtual",
+  status: true,
+  client: {
+    name: "Client Name",
+    client_id: "client_id"
+  },
+  date: {
+    created: ServerTimestamp,
+    updated: ""
+  },
+  address: {
+    country: { name: "...", code: "..." },
+    city: "...",
+    zipcode: "...",
+    line: "..."
+  },
+  contact: {
+    name: "Contact Person",
+    email: "contact@email.com",
+    phone: "+58..."
+  },
+  manager: {
+    name: "Manager Name",
+    email: "manager@email.com",
+    phone: "+58..."
+  },
+  schedules: [
+    {
+      day: "Lunes",
+      timeslot: {
+        from: "09:00 am",
+        to: "06:00 pm"
+      }
+    },
+    // ... other days
+  ]
+}
+```
+
+## Managing Office Settings
+
+Access office settings by navigating to the office detail page.
+
+### Settings Tabs
+
+**Details Tab**
+- Edit office name and type
+- Update address information
+- Modify contact details
+- Change operating hours
+
+**Security Tab**
+- Configure access permissions
+- Set security policies
+- Manage authentication requirements
+
+<Note>
+  Changes to office settings are tracked with an `updated` timestamp in the `date` object.
+</Note>
+
+## Office Dashboard
+
+Each office has a dedicated dashboard displaying:
+
+- **Transactions**: Recent sales and ticket transactions
+- **Events**: Upcoming events assigned to this office
+- **Offline Tickets**: Physical tickets pending synchronization
+- **Collaborators**: Staff members and their roles
+- **Sales Performance**: Revenue and ticket sales metrics
+
+## Sales Tracking
+
+The "Lista de Ventas por Taquilla" (Sales by Office) view provides comprehensive sales analytics:
+
+### Sales Metrics
+
+- Total tickets sold per office
+- Revenue by payment method
+- Daily, weekly, and monthly sales trends
+- Top-performing offices
+- Collaborator sales performance
+
+### Filtering Options
+
+- Date range selection
+- Office location
+- Event name
+- Payment method
+- Ticket type
+
+## Payment Method Configuration
+
+Payment methods are stored as a subcollection under each office:
+
+```
+offices/{office_id}/payment_methods/{payment_method_id}
+```
+
+Each payment method includes:
+
+```javascript
+{
+  currency: "USD" | "VES" | "EUR",
+  name: "Payment Method Name",
+  payment_method_id: "pm_id",
+  custody_account: "Account details",
+  method: "card" | "cash" | "transfer",
+  data: { /* method-specific data */ },
+  percentage: 2.5, // Processing fee
+  client: {
+    client_id: "...",
+    name: "..."
+  }
+}
+```
+
+## Collaborator Management
+
+When collaborators are assigned to an office, bidirectional references are created:
+
+1. **Office → Collaborator**: `offices/{office_id}/collaborators/{user_id}`
+2. **Collaborator → Office**: `u_collaborators/{user_id}/offices/{office_id}`
+
+This allows both:
+- Viewing all staff at an office
+- Viewing all offices where a staff member works
+
+## Virtual Office Considerations
+
+Virtual offices have special requirements:
+
+- No physical address or operating hours required
+- Must be linked to a portal for online sales
+- Payment methods are typically electronic (cards, transfers)
+- Collaborators work remotely
+
+<Warning>
+  Virtual offices should be associated with a portal to enable online ticket sales.
+</Warning>
+
+## Office Status Management
+
+Offices can be activated or deactivated:
+
+- **Active (status: true)**: Office is operational and can process sales
+- **Inactive (status: false)**: Office is closed but data is retained
+
+## Best Practices
+
+1. **Accurate Schedules**: Keep operating hours up-to-date for physical locations
+2. **Payment Method Updates**: Regularly review and update accepted payment methods
+3. **Staff Assignments**: Ensure each office has adequate staffing
+4. **Contact Information**: Maintain current contact details for office managers
+5. **Regular Audits**: Review office performance metrics monthly
+
+## Troubleshooting
+
+### Cannot Select Payment Methods
+
+- Verify a client has been selected first
+- Check that payment methods exist for the selected client
+- Ensure payment methods are active in the system
+
+### Collaborators Not Available
+
+- Verify collaborators have status set to `true`
+- Check that user account type is "Taquillero", "Administrador", or "Jefe de Taquilla"
+- Confirm collaborators exist in `u_collaborators` collection
+
+### Schedule Validation Errors
+
+- Ensure opening time is before closing time
+- Use correct time format (12-hour with AM/PM)
+- Check that at least one day is selected for physical offices

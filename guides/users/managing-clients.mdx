@@ -1,0 +1,405 @@
+---
+title: Managing Client Users
+description: Learn how to create, edit, and manage client user accounts in TMT
+---
+
+Client users represent business entities that use the TMT platform for transactions. These accounts require comprehensive legal and financial documentation.
+
+## Overview
+
+Client management includes:
+
+<CardGroup cols={2}>
+  <Card title="Create Client Accounts" icon="building">
+    Register new business clients with full documentation
+  </Card>
+  <Card title="Edit Client Details" icon="pen-to-square">
+    Update client information and documentation
+  </Card>
+  <Card title="View Client List" icon="list">
+    Browse and search all registered clients
+  </Card>
+  <Card title="Manage Legal Documents" icon="file-contract">
+    Upload and maintain required business documentation
+  </Card>
+</CardGroup>
+
+## Creating a New Client User
+
+Client account creation requires extensive information due to legal and compliance requirements.
+
+<Steps>
+  <Step title="Navigate to Client Management">
+    Go to **Users** > **Clients** in the main navigation, then click **Add Client**.
+  </Step>
+
+  <Step title="Upload Profile Picture (Optional)">
+    Upload a company logo or representative image:
+    - Accepted formats: JPG, GIF, or PNG
+    - Maximum file size: 500KB
+    - Recommended dimensions: 200x200 pixels
+    - Click **Upload** or drag and drop the file
+  </Step>
+
+  <Step title="Set Password">
+    Create secure login credentials:
+    - **Password**: Minimum 6 characters
+    - **Confirm Password**: Must match password
+    - Toggle password visibility with the eye icon
+  </Step>
+
+  <Step title="Enter Personal Details">
+    Provide company identification:
+    
+    **Required Fields:**
+    - **Name / Business Name**: Legal registered name
+    - **Commercial Name**: Trading or brand name
+    - **Email**: Primary contact email for login
+    - **Phone**: Business contact number with country code
+    - **ID Type**: Select business identification type
+    - **ID Number**: Business registration number (numbers only)
+  </Step>
+
+  <Step title="Provide Address Information">
+    Complete business location details:
+    - **Country**: Select business location country
+    - **Postal Code**: Business postal/zip code
+    - **City**: Business city
+    - **Address**: Complete business address
+  </Step>
+
+  <Step title="Upload Legal and Fiscal Documentation">
+    Upload all required business documents in PDF format:
+    
+    <Warning>
+      All four documents are **mandatory** and must be uploaded before submission.
+    </Warning>
+    
+    **Required Documents:**
+    - **Commercial Registry**: Official business registration certificate
+    - **Last Assembly Minutes**: Most recent shareholder meeting minutes
+    - **Fiscal Information Registration**: Tax registration certificate
+    - **Commercial License**: Business operating license or permit
+    
+    Each document can be removed and re-uploaded if needed using the trash icon.
+  </Step>
+
+  <Step title="Select Taxpayer Type">
+    Specify the client's tax classification:
+    - **Taxpayer Type**: Choose between:
+      - **Natural Person**: Individual taxpayer
+      - **Legal Entity**: Corporate taxpayer
+    
+    If **Legal Entity** is selected, additional field appears:
+    - **Special Condition**: Select either:
+      - Special Taxpayer (Contribuyente Especial)
+      - Special Withholding Agent (Agente Especial de Retención)
+  </Step>
+
+  <Step title="Enter Legal Representative Information">
+    Provide details for the authorized company representative:
+    - **Name**: Full name of legal representative
+    - **ID**: Identification number with type prefix (V, E, etc.)
+    - **RIF**: Tax identification number with prefix (J, G, etc.)
+  </Step>
+
+  <Step title="Enter Contact Person Information">
+    Specify the primary business contact:
+    - **Name**: Full name of contact person
+    - **ID**: Identification number with type prefix
+  </Step>
+
+  <Step title="Configure Bank Accounts">
+    Add at least one bank account for transactions:
+    
+    **For Each Bank Account:**
+    - **Type**: Select bank account country
+    - **Bank**: Choose from available banks in selected country
+    - **Account Number**: Enter account number
+    - **Currency**: Select account currency
+    
+    **For US Bank Accounts (additional fields):**
+    - **SWIFT Code**: International bank identifier
+    - **ABA Number**: Routing number (numbers only)
+    
+    <Tip>
+      Click **Add Account** to register multiple bank accounts for different currencies or countries.
+    </Tip>
+  </Step>
+
+  <Step title="Review and Confirm">
+    Before final submission:
+    - A confirmation dialog will appear
+    - Review all entered information
+    - Ensure all documents are uploaded
+    - Click **Confirm** to create the client account
+  </Step>
+
+  <Step title="Save the Client">
+    Click **Save** to create the client account. The system will:
+    - Create the client user account
+    - Upload all documents to secure storage
+    - Send a success notification
+  </Step>
+</Steps>
+
+## Editing Client Information
+
+To update an existing client's information:
+
+<Steps>
+  <Step title="Locate the Client">
+    - Navigate to the **Client List**
+    - Use the search bar to filter by name, email, creation date, or status
+    - Click the **eye icon** next to the client to view details
+  </Step>
+
+  <Step title="Access Edit Mode">
+    From the client detail page, click **Edit** to modify information.
+  </Step>
+
+  <Step title="Update Information">
+    You can modify:
+    - Profile picture/logo
+    - Personal and business details
+    - Address information
+    - Legal documents (replace existing files)
+    - Taxpayer information
+    - Legal representative details
+    - Contact person information
+    - Bank accounts (add, edit, or remove)
+    
+    <Note>
+      Email addresses cannot be changed after account creation.
+    </Note>
+  </Step>
+
+  <Step title="Save Changes">
+    Click **Save** to apply changes or **Cancel** to discard them.
+  </Step>
+</Steps>
+
+## Viewing Client Users
+
+The client list provides comprehensive management capabilities:
+
+### List Features
+
+- **Search Functionality**: Filter clients by name, email, creation date, or status
+- **Status Indicators**: Visual chips showing active/inactive status
+- **Sorting**: Sort by any column including name, date, status, and email
+- **Pagination**: Configurable rows per page (10, 15, or 20)
+- **Export**: Download complete client list as CSV
+- **Profile Images**: Visual identification with company logos
+
+### Client Information Displayed
+
+- Company logo/profile picture
+- Business name
+- Creation date
+- Active/inactive status
+- Contact email
+- Quick action buttons
+
+## Legal Documentation Requirements
+
+<AccordionGroup>
+  <Accordion title="Commercial Registry (Registro Mercantil)">
+    Official document proving the legal registration of the business entity.
+    
+    **Requirements:**
+    - Must be in PDF format
+    - Should be current and not expired
+    - Must match the business name provided
+    - Issued by authorized government entity
+  </Accordion>
+
+  <Accordion title="Last Assembly Minutes (Última Acta de Asamblea)">
+    Documentation of the most recent shareholder or board meeting.
+    
+    **Requirements:**
+    - Must be in PDF format
+    - Should reflect current company structure
+    - Must include date of meeting
+    - Signed by authorized representatives
+  </Accordion>
+
+  <Accordion title="Fiscal Information Registration (Registro de Información Fiscal)">
+    Tax registration certificate from the relevant tax authority.
+    
+    **Requirements:**
+    - Must be in PDF format
+    - Valid and current registration
+    - Includes tax identification number (RIF)
+    - Matches taxpayer type selected
+  </Accordion>
+
+  <Accordion title="Commercial License (Licencia o Patente Comercial)">
+    Business operating license or commercial permit.
+    
+    **Requirements:**
+    - Must be in PDF format
+    - Current and not expired
+    - Valid for business operations
+    - Issued by local authorities
+  </Accordion>
+</AccordionGroup>
+
+## Bank Account Configuration
+
+Clients can have multiple bank accounts in different currencies and countries.
+
+### Supported Bank Account Types
+
+<CardGroup cols={2}>
+  <Card title="Domestic Accounts" icon="building-columns">
+    Standard accounts in the client's country requiring:
+    - Bank selection
+    - Account number
+    - Currency
+  </Card>
+  <Card title="US Bank Accounts" icon="dollar-sign">
+    International accounts with additional requirements:
+    - SWIFT code
+    - ABA routing number
+  </Card>
+</CardGroup>
+
+### Adding Multiple Accounts
+
+1. Fill in the first bank account details
+2. Click **Add Account** button
+3. A new set of fields appears
+4. Fill in additional account details
+5. Repeat as needed
+
+<Tip>
+  Configure accounts in multiple currencies to facilitate international transactions.
+</Tip>
+
+## Validation Rules
+
+| Field | Validation Rule |
+|-------|----------------|
+| Business Name | Required, cannot be empty |
+| Commercial Name | Required |
+| Email | Valid email format, unique |
+| Phone | Valid international phone number |
+| ID Number | Numbers only, required |
+| Password | Minimum 6 characters (creation only) |
+| All Legal Documents | Required, PDF format only |
+| Taxpayer Type | Must select type |
+| Legal Representative Name | Required |
+| Legal Representative ID | Required |
+| Legal Representative RIF | Required |
+| Contact Person Name | Required |
+| Contact Person ID | Required |
+| Bank Accounts | At least one required |
+| ABA Number (US accounts) | Numbers only |
+
+## Taxpayer Type Classification
+
+Understanding the different taxpayer classifications:
+
+### Natural Person (Persona Natural)
+Individual taxpayers operating as sole proprietors:
+- Individual business owner
+- Personal tax identification
+- Simplified reporting requirements
+
+### Legal Entity (Persona Jurídica)
+Corporate taxpayers with special conditions:
+
+**Special Taxpayer (Contribuyente Especial)**
+- Large corporations with special tax obligations
+- Enhanced reporting requirements
+- May have preferential or special tax treatments
+
+**Special Withholding Agent (Agente Especial de Retención)**
+- Authorized to withhold taxes on behalf of tax authority
+- Additional compliance responsibilities
+- Regular withholding tax reporting
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Document Management">
+    - Keep all documents current and up-to-date
+    - Use high-quality scans (300 DPI minimum)
+    - Ensure documents are legible and complete
+    - Store original documents securely offline
+    - Review and update annually
+  </Accordion>
+
+  <Accordion title="Bank Account Setup">
+    - Add all relevant bank accounts upfront
+    - Verify account numbers before saving
+    - Include accounts in multiple currencies for flexibility
+    - Update banking information promptly when changed
+    - Test small transactions to verify account details
+  </Accordion>
+
+  <Accordion title="Contact Information">
+    - Ensure email addresses are monitored regularly
+    - Provide direct phone numbers for urgent matters
+    - Update contact persons when roles change
+    - Verify legal representative information is current
+    - Maintain backup contact information
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Tabs>
+  <Tab title="Cannot Submit Form">
+    **Issue**: Save button disabled or submission fails
+    
+    **Common Causes**:
+    - Missing required documents
+    - Invalid email format
+    - Passwords don't match
+    - No bank accounts added
+    - Missing legal representative or contact information
+    
+    **Solution**: Review the confirmation dialog for specific missing fields.
+  </Tab>
+
+  <Tab title="Document Upload Errors">
+    **Issue**: Cannot upload legal documents
+    
+    **Solutions**:
+    - Ensure files are in PDF format only
+    - Check file size is reasonable (under 10MB recommended)
+    - Verify internet connection is stable
+    - Try uploading documents one at a time
+    - Clear browser cache and retry
+  </Tab>
+
+  <Tab title="Bank Account Issues">
+    **Issue**: Cannot add or validate bank accounts
+    
+    **Solutions**:
+    - Verify account number format is correct
+    - For US accounts, ensure ABA contains only numbers
+    - Check that selected bank matches the country
+    - Ensure currency is valid for selected country
+    - Verify SWIFT code format is correct
+  </Tab>
+</Tabs>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Managing Staff" icon="user-tie" href="/guides/users/managing-staff">
+    Learn how to manage staff users
+  </Card>
+  <Card title="Managing Collaborators" icon="handshake" href="/guides/users/managing-collaborators">
+    Learn how to manage collaborator users
+  </Card>
+  <Card title="Transaction Management" icon="money-bill-transfer" href="/guides/transactions">
+    Process client transactions
+  </Card>
+  <Card title="Payout Management" icon="hand-holding-dollar" href="/guides/payouts">
+    Manage client payouts
+  </Card>
+</CardGroup>

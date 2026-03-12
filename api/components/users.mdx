@@ -1,0 +1,402 @@
+---
+title: "User Components"
+description: "React components for user and client management"
+icon: "users"
+---
+
+## Overview
+
+User components handle the management of different user types in the TradeMaster Transactions platform. Components are organized by user role in `src/components/apps/users/`.
+
+## User Types
+
+The platform supports four user types:
+
+- **Clients** - Event organizers and promoters
+- **Collaborators** - Staff assigned to events and offices
+- **Customers** - Ticket purchasers and attendees
+- **Staff** - Platform administrators and operators
+
+## ClientsTableList
+
+Displays a paginated table of client users with search and filtering.
+
+**Location:** `src/components/apps/users/Clients/ClientsTableList.js:28`
+
+### Features
+
+- **Global Search** - Search by name, email, or account type
+- **Status Filtering** - Filter by active/inactive status
+- **Sortable Columns** - Sort by name, last access, status, or email
+- **Pagination** - 10, 15, or 20 rows per page
+- **CSV Export** - Download client data
+- **Permission Controls** - Create button requires `create:usersClients` permission
+
+### Data Fields
+
+The table displays:
+
+| Column | Field | Description |
+|--------|-------|-------------|
+| Nombre | `name` | Client name with avatar and account type |
+| Último Acceso | `date.last_access` | Last login date |
+| Estatus | `status` | Active/Inactive badge |
+| Correo Electrónico | `email` | Client email address |
+| Acciones | - | View details button |
+
+### Usage Example
+
+```jsx
+import ClientsTableList from 'src/components/apps/users/Clients/ClientsTableList';
+
+function ClientsPage() {
+  return (
+    <div>
+      <Typography variant="h4">Client Management</Typography>
+      <ClientsTableList />
+    </div>
+  );
+}
+```
+
+### Redux Integration
+
+The component connects to the Redux store:
+
+```jsx
+import { fetchClientsUsers } from 'src/store/apps/Users/ClientsSlice';
+
+// Dispatched on component mount
+dispatch(fetchClientsUsers());
+
+// Select data from store
+const clients = useSelector((state) => state.clients.Clients);
+```
+
+### Status Chip Component
+
+Internal component that renders status badges:
+
+<ParamField path="status" type="boolean" required>
+  - `true` - Shows green "Activo" badge
+  - `false` - Shows red "Inactivo" badge
+</ParamField>
+
+## Client Detail Components
+
+Located in `src/components/apps/users/Clients/clients-detail/`:
+
+### ProfileBanner
+
+Displays client profile header with avatar and basic information.
+
+**Props:**
+
+<ParamField path="client" type="object" required>
+  Client object containing:
+  - `name` - Client name
+  - `image` - Profile image URL
+  - `account_type` - Account classification
+  - `status` - Active status
+</ParamField>
+
+### IntroCard
+
+Client introduction card with contact information.
+
+**Props:**
+
+<ParamField path="client" type="object" required>
+  Client object with contact details
+</ParamField>
+
+### LegalInfoCard
+
+Displays legal and tax information for the client.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID to fetch legal information
+</ParamField>
+
+### BankAccountsCard
+
+Manages client bank accounts for payouts.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID for bank account lookup
+</ParamField>
+
+**Features:**
+- List all bank accounts
+- Add new accounts
+- Set default account
+- Verify account status
+
+### ContractsCard
+
+Displays contracts associated with the client.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID to filter contracts
+</ParamField>
+
+### ClientEvents
+
+Shows events created by this client.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID to filter events
+</ParamField>
+
+### RevenueUpdates
+
+Chart component showing client revenue over time.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID for revenue data
+</ParamField>
+
+## Collaborator Components
+
+Located in `src/components/apps/users/Collaborators/`:
+
+### CollaboratorsTableList
+
+Table view of all collaborators in the system.
+
+**Location:** `src/components/apps/users/Collaborators/CollaboratorsTableList.js`
+
+**Features:**
+- Search and filter collaborators
+- View assigned events and offices
+- Manage collaborator status
+- Export collaborator data
+
+### ClientCollaboratorsTableList
+
+Filtered view showing collaborators for a specific client.
+
+**Props:**
+
+<ParamField path="clientId" type="string" required>
+  Client ID to filter collaborators
+</ParamField>
+
+### Collaborator Detail Components
+
+Located in `src/components/apps/users/Collaborators/collaborator-detail/`:
+
+- **ProfileBanner** - Collaborator profile header
+- **IntroCard** - Personal information
+- **ClientInfoCard** - Associated client details
+- **PhotosCard** - Collaborator photos and identification
+- **AssignedEventsCard** - Events assigned to this collaborator
+- **AssignedOfficesCard** - Offices/ticket booths assigned
+
+## Customer Components
+
+Located in `src/components/apps/users/Customers/`:
+
+### CustomersTableList
+
+Table view of ticket purchasers and event attendees.
+
+**Features:**
+- Search by name, email, or phone
+- View purchase history
+- Filter by event or date range
+- Export customer data
+
+### CustomerDetail
+
+Detailed customer view with:
+- Contact information
+- Purchase history
+- Ticket ownership
+- Payment methods
+
+## Staff Components
+
+Located in `src/components/apps/users/Staff/`:
+
+### StaffTableList
+
+Management interface for platform staff users.
+
+**Features:**
+- Role-based filtering
+- Permission assignment
+- Activity tracking
+- Status management
+
+## New User Forms
+
+Located in `src/components/apps/users/NewUsers/` and `src/components/apps/users/EditUsers/`:
+
+### NewClientForm
+
+Form for creating new client accounts.
+
+**Fields:**
+
+<ParamField path="name" type="string" required>
+  Client name
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  Email address (used for login)
+</ParamField>
+
+<ParamField path="phone" type="string" required>
+  Contact phone number
+</ParamField>
+
+<ParamField path="account_type" type="string" required>
+  Account classification (Individual, Business, etc.)
+</ParamField>
+
+<ParamField path="image" type="File" optional>
+  Profile image upload
+</ParamField>
+
+### NewCollaboratorForm
+
+Form for adding collaborators to the system.
+
+**Fields:**
+
+<ParamField path="name" type="string" required>
+  Collaborator full name
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  Email address
+</ParamField>
+
+<ParamField path="client_id" type="string" required>
+  Associated client ID
+</ParamField>
+
+<ParamField path="role" type="string" required>
+  Collaborator role (e.g., Staff, Coordinator, Security)
+</ParamField>
+
+<ParamField path="photo" type="File" optional>
+  Profile photo
+</ParamField>
+
+### NewStaffForm
+
+Form for creating platform staff accounts.
+
+**Fields:**
+
+<ParamField path="name" type="string" required>
+  Staff member name
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  Email address
+</ParamField>
+
+<ParamField path="role" type="string" required>
+  Staff role (Admin, Operator, Support)
+</ParamField>
+
+<ParamField path="permissions" type="array" required>
+  Array of permission strings for CASL
+</ParamField>
+
+## Common Patterns
+
+### User Data Structure
+
+All user types share common fields:
+
+```typescript
+interface BaseUser {
+  uid: string;              // Firebase Auth UID
+  name: string;             // Display name
+  email: string;            // Email address
+  image?: string;           // Profile image URL
+  status: boolean;          // Active/Inactive
+  date: {
+    created: Timestamp;     // Creation date
+    last_access: string;    // Last login
+    updated: Timestamp;     // Last update
+  };
+  account_type: string;     // User classification
+}
+```
+
+### User Actions
+
+Common actions available for user components:
+
+- **View Details** - Navigate to user detail page
+- **Edit** - Modify user information
+- **Deactivate** - Disable user access
+- **Activate** - Re-enable user access
+- **Delete** - Remove user (admin only)
+
+### Navigation Patterns
+
+User components follow consistent navigation:
+
+```jsx
+const navigate = useNavigate();
+
+// Navigate to client detail
+navigate(`/usuarios-detalle-cliente?id=${clientId}`);
+
+// Navigate to create client
+navigate('/usuarios-clientes-crear');
+
+// Navigate to edit client
+navigate(`/usuarios-clientes-editar?id=${clientId}`);
+```
+
+## Styling and Theming
+
+All user components use consistent Material-UI theming:
+
+```jsx
+const theme = useTheme();
+
+// Status chip colors
+const statusColor = status 
+  ? theme.palette.success.main 
+  : theme.palette.error.main;
+
+// Background for dark mode
+const bgColor = theme.palette.mode === 'dark' 
+  ? 'rgba(255, 255, 255, 0.05)' 
+  : 'rgba(0, 0, 0, 0.02)';
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Clients Store" icon="database" href="/api/store/clients">
+    Redux store for client state management
+  </Card>
+  <Card title="Event Components" icon="calendar" href="/api/components/events">
+    Components that integrate with user data
+  </Card>
+  <Card title="User Management Guide" icon="book" href="/guides/users/managing-staff">
+    Step-by-step user management guides
+  </Card>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    User authentication and permissions
+  </Card>
+</CardGroup>

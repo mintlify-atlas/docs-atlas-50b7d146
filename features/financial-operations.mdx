@@ -1,0 +1,658 @@
+---
+title: Financial Operations
+description: Comprehensive financial management including transactions, payouts, custody accounts, and revenue tracking
+icon: 'dollar-sign'
+---
+
+The TMT platform provides robust financial operations capabilities for managing transactions, processing payouts to clients, maintaining custody accounts, and tracking revenue across events.
+
+## Financial System Overview
+
+<CardGroup cols={3}>
+  <Card title="Transactions" icon="receipt">
+    Track all financial transactions including ticket sales, refunds, and adjustments
+  </Card>
+  <Card title="Payouts" icon="money-bill-transfer">
+    Manage client payout accounts and process payments to event organizers
+  </Card>
+  <Card title="Custody Accounts" icon="vault">
+    Maintain custody accounts for holding funds before distribution
+  </Card>
+</CardGroup>
+
+## Transaction Management
+
+**Location**: `src/views/transactions/TransactionsList.js`
+
+The transaction system records all financial activities on the platform.
+
+### Transaction List View
+
+```javascript
+// From src/views/transactions/TransactionsList.js:18-29
+const EventsList = () => {
+  return (
+    <PageContainer title="Lista de Transacciones" 
+                   description="esta es la página del lista de Transacciones">
+      <Breadcrumb title="Lista de Transacciones" items={BCrumb} />
+      <Box>
+        <TransactionsTable />
+      </Box>
+    </PageContainer>
+  );
+};
+```
+
+**Implementation**: `src/components/apps/transactions/transactionsTable.js`
+
+Displays:
+- Transaction ID and date
+- Transaction type (sale, refund, adjustment, payout)
+- Amount and currency
+- Associated event
+- Client/customer information
+- Payment method
+- Status (pending, completed, failed, reversed)
+
+### Transaction Data Structure
+
+Transactions are stored in the `transactions` Firestore collection:
+
+```javascript
+{
+  transaction_id: string,
+  transaction_type: string, // 'sale', 'refund', 'adjustment', 'payout', 'fee'
+  
+  // Amounts
+  amount: number,
+  currency: string,
+  platform_fee: number,
+  service_fee: number,
+  net_amount: number,
+  
+  // Associations
+  event_id: string,
+  event_name: string,
+  order_id: string,
+  ticket_ids: [string],
+  client_id: string,
+  customer_id: string,
+  
+  // Payment details
+  payment_method: string,
+  payment_provider: string,
+  payment_reference: string,
+  
+  // Status
+  status: string, // 'pending', 'completed', 'failed', 'reversed'
+  
+  // Timestamps
+  date: {
+    created: timestamp,
+    completed: timestamp,
+    updated: timestamp
+  },
+  
+  // Notes
+  description: string,
+  notes: string,
+  processed_by: string
+}
+```
+
+### Transaction Types
+
+<Accordion title="Sale Transactions">
+  Created when tickets are purchased:
+  - Amount: Total ticket price including fees
+  - Platform fee: Calculated based on configuration
+  - Service fee: Per-ticket service charge
+  - Net amount: Amount payable to client after fees
+  - Status: Pending until payment confirmed
+</Accordion>
+
+<Accordion title="Refund Transactions">
+  Created when tickets are refunded:
+  - Amount: Negative value of original sale
+  - References original transaction ID
+  - Updates original ticket status
+  - May include refund processing fee
+  - Adjusts client payout amounts
+</Accordion>
+
+<Accordion title="Adjustment Transactions">
+  Manual financial adjustments:
+  - Administrative corrections
+  - Fee waivers or additions
+  - Promotional credits
+  - Error corrections
+  - Requires admin approval
+</Accordion>
+
+<Accordion title="Payout Transactions">
+  When funds are distributed to clients:
+  - Amount: Total payout to client
+  - References custody account
+  - Links multiple sale transactions
+  - Includes payout method details
+  - Records completion confirmation
+</Accordion>
+
+### Transaction Details
+
+**Location**: `src/views/transactions/DisplayTransaction.js`
+
+Detailed transaction view showing:
+- Complete transaction information
+- Associated orders and tickets
+- Payment method and provider details
+- Fee breakdown
+- Status history
+- Related transactions (refunds, adjustments)
+- Audit trail
+
+**Implementation**: `src/components/apps/transactions/DisplayTransaction.js` (implied)
+
+## Payout Management
+
+**Location**: `src/views/payout/PayoutList.js`
+
+Payout accounts store client payment information for receiving funds from ticket sales.
+
+### Payout List View
+
+```javascript
+// From src/views/payout/PayoutList.js:18-29
+const PayoutList = () => {
+  return (
+    <PageContainer title="Lista de Cuentas de Pago" 
+                   description="esta es la página del lista de Cuentas de Pago">
+      <Breadcrumb title="Lista de Cuentas de Pago" items={BCrumb} />
+      <Box>
+        <PayoutsListView />
+      </Box>
+    </PageContainer>
+  );
+};
+```
+
+**Implementation**: `src/components/apps/payout/PayoutTable.js`
+
+### Payout Account Structure
+
+Payout accounts are stored in the `payouts` collection:
+
+```javascript
+{
+  payout_account_id: string,
+  
+  // Client association
+  client_id: string,
+  client_name: string,
+  
+  // Bank account details
+  account_holder_name: string,
+  account_number: string,
+  account_type: string, // 'checking', 'savings'
+  bank_name: string,
+  bank_code: string,
+  routing_number: string,
+  swift_code: string,
+  
+  // Location
+  country: string,
+  currency: string,
+  
+  // Status
+  status: boolean,
+  is_default: boolean,
+  verified: boolean,
+  
+  // Metadata
+  date: {
+    created: timestamp,
+    updated: timestamp,
+    verified: timestamp
+  },
+  
+  // Payout history
+  total_payouts: number,
+  total_amount_paid: number,
+  last_payout_date: timestamp
+}
+```
+
+### Creating Payout Accounts
+
+**Location**: `src/views/payout/NewPayout.js`
+
+**UI Flow:**
+<Steps>
+  <Step title="Select Client">
+    Choose the client who will receive payouts
+  </Step>
+  <Step title="Enter Bank Details">
+    Provide complete bank account information
+  </Step>
+  <Step title="Verify Information">
+    Review and confirm all details are correct
+  </Step>
+  <Step title="Submit for Verification">
+    Submit account for verification process
+  </Step>
+</Steps>
+
+**Implementation**: `src/components/apps/payout/PayoutForm.js` (implied)
+
+**Required Fields:**
+- Account holder name
+- Account number
+- Bank name
+- Account type
+- Country and currency
+- Client association
+
+### Editing Payout Accounts
+
+**Location**: `src/views/payout/EditPayout.js`
+
+Update payout account information:
+- Bank details can be updated if unverified
+- Verified accounts require re-verification after changes
+- Cannot change client association
+- Can set as default payout account
+
+### Payout Details View
+
+**Location**: `src/views/payout/DisplayPayout.js`
+
+View comprehensive payout account information:
+- Bank account details (masked for security)
+- Verification status
+- Payout history
+- Total amounts paid
+- Associated transactions
+- Pending payouts
+
+### Client Payout Management
+
+**Location**: `src/views/Users/Clients/payouts/PayoutList.js`
+
+Clients can view their payout accounts:
+
+```javascript
+// Client-specific payout list filtered by client_id
+```
+
+**Create Client Payout**: `src/views/Users/Clients/payouts/CreatePayout.js`
+
+**Implementation**: `src/components/apps/users/Clients/payouts/PayoutTable.js` and `PayoutForm.js`
+
+### Payout Processing
+
+Payouts are processed periodically (typically weekly or monthly):
+
+1. **Calculation**: Aggregate all completed transactions for client
+2. **Fee Deduction**: Subtract platform and service fees
+3. **Split Application**: Apply any revenue splits to collaborators
+4. **Payout Creation**: Create payout transaction
+5. **Transfer**: Initiate bank transfer to client account
+6. **Confirmation**: Update status when transfer completes
+7. **Notification**: Notify client of payout completion
+
+## Custody Accounts
+
+**Location**: `src/views/custody-accounts/CustodyAccountsList.js`
+
+Custody accounts hold funds temporarily before distribution to clients.
+
+### Custody Account List
+
+```javascript
+// From src/views/custody-accounts/CustodyAccountsList.js:18-29
+const CustodyAccountsList = () => {
+  return (
+    <PageContainer title="Lista de Cuentas Custodio" 
+                   description="esta es la página del lista de Cuentas Custodio">
+      <Breadcrumb title="Lista de Cuentas Custodio" items={BCrumb} />
+      <Box>
+        <CustodyAccountsTable />
+      </Box>
+    </PageContainer>
+  );
+};
+```
+
+**Implementation**: `src/components/apps/custody-accounts/CustodyAccountsTable.js`
+
+### Custody Account Structure
+
+Stored in `custody_accounts` collection:
+
+```javascript
+{
+  custody_account_id: string,
+  
+  // Account details
+  account_name: string,
+  account_number: string,
+  account_type: string,
+  
+  // Balances
+  current_balance: number,
+  pending_payouts: number,
+  reserved_balance: number,
+  available_balance: number,
+  
+  // Currency
+  currency: string,
+  
+  // Associated entities
+  event_ids: [string],
+  client_ids: [string],
+  
+  // Status
+  status: string,
+  
+  // Timestamps
+  date: {
+    created: timestamp,
+    last_transaction: timestamp,
+    updated: timestamp
+  }
+}
+```
+
+### Creating Custody Accounts
+
+**Location**: `src/views/custody-accounts/NewCustodyAccounts.js`
+
+Create custody accounts for:
+- Specific events
+- Specific clients
+- General platform funds
+- Reserve funds
+
+### Editing Custody Accounts
+
+**Location**: `src/views/custody-accounts/EditCustodyAccounts.js`
+
+Update custody account settings and associations.
+
+### Custody Account Details
+
+**Location**: `src/views/custody-accounts/CustodyAccountsDisplay.js`
+
+View detailed custody account information:
+- Current balance
+- Transaction history
+- Pending payouts
+- Associated events and clients
+- Fund allocation breakdown
+
+### Custody Account Orders
+
+**Location**: `src/views/custody-accounts/CustodyAccountOrderDetail.js`
+
+View orders associated with a custody account:
+- Order details
+- Payment status
+- Fund allocation
+- Payout scheduling
+
+## Revenue Tracking
+
+Revenue is tracked at multiple levels:
+
+### Event Revenue
+
+**Component**: `src/components/apps/events/event-detail/RevenueUpdates.js`
+
+Real-time revenue metrics per event:
+- Gross revenue (total ticket sales)
+- Net revenue (after fees)
+- Platform fees collected
+- Service fees collected
+- Revenue by zone/section
+- Revenue trends over time
+- Projected vs. actual revenue
+
+### Client Revenue
+
+**Component**: `src/components/apps/users/Clients/clients-detail/RevenueUpdates.js`
+
+Client-level revenue aggregation:
+- Total revenue across all events
+- Revenue by event
+- Pending payouts
+- Completed payouts
+- Revenue splits with collaborators
+- Historical revenue trends
+
+### Platform Revenue
+
+Platform-wide financial metrics:
+- Total gross revenue
+- Total platform fees
+- Total service fees
+- Active custody balance
+- Pending payouts
+- Completed payouts
+- Revenue by event type
+- Revenue by client
+
+## Financial Splits
+
+Revenue sharing between parties:
+
+```javascript
+// From event setup (src/components/apps/events/setup-event/SetupEventSplitForm.js)
+{
+  splits: [{
+    party_type: string, // 'platform', 'client', 'collaborator', 'venue'
+    party_id: string,
+    party_name: string,
+    percentage: number,
+    fixed_amount: number,
+    split_type: 'percentage' | 'fixed'
+  }],
+  
+  // Validation
+  total_percentage: number, // Must equal 100
+  
+  // Application
+  applied_to: 'gross' | 'net', // Before or after platform fees
+}
+```
+
+### Split Calculation Example
+
+```javascript
+// Ticket sale: $100
+// Platform fee: 10% = $10
+// Gross: $100
+// Net after platform fee: $90
+
+// Splits applied to net:
+// Client: 70% of $90 = $63
+// Collaborator: 20% of $90 = $18  
+// Venue: 10% of $90 = $9
+```
+
+## Financial Adjustments
+
+**Component**: `src/components/apps/events/setup-event/SetupFinancialAdjustments.js`
+
+Apply adjustments to event finances:
+
+- **Fee waivers**: Reduce or eliminate platform fees
+- **Promotional credits**: Apply credits to clients
+- **Corrections**: Fix calculation errors
+- **Chargebacks**: Handle payment disputes
+- **Refund fees**: Apply fees for refunds
+
+## Order Management
+
+**Location**: `src/views/orders/` directory
+
+Orders represent ticket purchases:
+
+```javascript
+{
+  order_id: string,
+  order_number: string,
+  
+  // Customer
+  customer_id: string,
+  customer_name: string,
+  customer_email: string,
+  
+  // Event
+  event_id: string,
+  event_name: string,
+  
+  // Items
+  tickets: [{
+    ticket_id: string,
+    zone: string,
+    seat: string,
+    price: number
+  }],
+  
+  // Totals
+  subtotal: number,
+  fees: number,
+  taxes: number,
+  total: number,
+  
+  // Payment
+  payment_method: string,
+  payment_status: string,
+  transaction_id: string,
+  
+  // Status
+  order_status: string, // 'pending', 'confirmed', 'cancelled', 'refunded'
+  
+  // Dates
+  date: {
+    created: timestamp,
+    confirmed: timestamp,
+    completed: timestamp
+  }
+}
+```
+
+### Order Payouts
+
+**Location**: `src/views/orders-payout/` directory
+
+Track payout status for orders:
+- Orders eligible for payout
+- Payout processing status
+- Payout completion dates
+- Payout batch associations
+
+## Event Billing
+
+**Location**: `src/views/event-billing/` directory
+
+Manage billing for events:
+- Generate invoices
+- Track payments
+- Send billing reminders
+- Payment history
+- Outstanding balances
+
+## Financial Permissions
+
+Financial operations require specific permissions:
+
+```javascript
+// From src/guards/contexts/DefineAbilities.js
+
+// Viewing payouts
+can('view', 'ViewPayouts') // Administrador only (denied for others)
+can('view', 'ViewClientPayouts') // Coordinador, Contador
+
+// Viewing transactions
+// (Generally restricted - implement permission checks)
+
+// Financial operations
+// (Require admin or contador role)
+```
+
+<Warning>
+  Financial operations are highly restricted. Most roles cannot access payout or transaction management. Only Administrador has full financial access.
+</Warning>
+
+## Best Practices
+
+<Check>
+  **Financial Operations Best Practices:**
+  - Regular reconciliation of custody accounts
+  - Verify bank details before processing payouts
+  - Maintain audit logs for all financial transactions
+  - Process payouts on a consistent schedule
+  - Monitor pending transactions and resolve issues promptly
+  - Keep detailed records for tax compliance
+  - Separate platform fees from client funds
+  - Regular backups of financial data
+  - Implement fraud detection and prevention
+  - Ensure proper permission controls
+</Check>
+
+## Financial Reporting
+
+Generate reports for:
+- Revenue by period (daily, weekly, monthly)
+- Client earnings statements
+- Platform fee collection
+- Payout summaries
+- Outstanding balances
+- Refund statistics
+- Event profitability
+- Tax reporting (1099, etc.)
+
+## Reconciliation
+
+Regular reconciliation process:
+
+1. **Transaction Verification**: Verify all transactions are recorded
+2. **Balance Checks**: Ensure custody account balances match records
+3. **Payout Verification**: Confirm all payouts were received by clients
+4. **Fee Calculation**: Verify platform fees are correctly calculated
+5. **Split Validation**: Ensure revenue splits are applied correctly
+6. **Discrepancy Resolution**: Investigate and resolve any mismatches
+
+## Integration Points
+
+<Accordion title="Payment Providers">
+  The platform can integrate with payment providers:
+  - Stripe for credit card processing
+  - PayPal for alternative payments
+  - Bank transfers for direct payments
+  - Digital wallets (Apple Pay, Google Pay)
+</Accordion>
+
+<Accordion title="Banking Integration">
+  For payout processing:
+  - ACH transfers (US)
+  - Wire transfers (international)
+  - SEPA transfers (Europe)
+  - Local payment rails by country
+</Accordion>
+
+<Accordion title="Accounting Software">
+  Export financial data to:
+  - QuickBooks
+  - Xero
+  - FreshBooks
+  - Custom accounting systems
+</Accordion>
+
+## Related Features
+
+- [Event Management](/features/event-management) - Revenue tracking per event
+- [Ticketing System](/features/ticketing) - Ticket sales and transactions
+- [User Management](/features/user-management) - Client payout information
+- [Authentication](/features/authentication) - Financial operation permissions

@@ -1,0 +1,546 @@
+---
+title: Installation
+description: Set up your TradeMaster Transactions development environment
+---
+
+# Installation Guide
+
+This guide walks you through setting up TradeMaster Transactions (TMT) for local development. Follow these steps to get your development environment ready.
+
+## System Requirements
+
+Before installing TMT, ensure your system meets these requirements:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Version 16.x or higher
+  </Card>
+  <Card title="npm" icon="npm">
+    Version 7.x or higher (comes with Node.js)
+  </Card>
+  <Card title="Git" icon="git">
+    For cloning the repository
+  </Card>
+  <Card title="Firebase Account" icon="fire">
+    Active Firebase project with billing enabled
+  </Card>
+</CardGroup>
+
+<Note>
+  TMT uses **Vite** as the build tool, which requires Node.js 16+ for optimal performance.
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    First, clone the TMT repository to your local machine:
+
+    ```bash
+    git clone <repository-url>
+    cd trademastertransactions-tmt
+    ```
+
+    Verify you're in the correct directory:
+
+    ```bash
+    ls -la
+    ```
+
+    You should see `package.json`, `vite.config.js`, and the `src` directory.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+
+    ```bash
+    npm install
+    ```
+
+    This will install all dependencies listed in `package.json`, including:
+
+    <CodeGroup>
+    ```json Core Dependencies
+    {
+      "react": "^18.3.1",
+      "react-dom": "^18.3.1",
+      "@mui/material": "5.10.16",
+      "@mui/icons-material": "5.8.4",
+      "@emotion/react": "^11.10.0",
+      "@emotion/styled": "^11.10.0"
+    }
+    ```
+
+    ```json State Management
+    {
+      "@reduxjs/toolkit": "1.8.3",
+      "react-redux": "8.0.2",
+      "redux": "^5.0.1",
+      "redux-persist": "^6.0.0"
+    }
+    ```
+
+    ```json Firebase
+    {
+      "firebase": "^9.5.0",
+      "@auth0/auth0-spa-js": "^2.1.3"
+    }
+    ```
+
+    ```json Forms & Validation
+    {
+      "formik": "2.2.9",
+      "yup": "^0.32.11"
+    }
+    ```
+
+    ```json Additional Libraries
+    {
+      "react-router-dom": "6.3.0",
+      "axios": "0.27.2",
+      "react-toastify": "^10.0.5",
+      "date-fns": "^3.6.0",
+      "moment": "^2.30.1",
+      "apexcharts": "^3.50.0",
+      "react-apexcharts": "^1.4.1"
+    }
+    ```
+    </CodeGroup>
+
+    <Warning>
+      The installation may take several minutes depending on your internet connection.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Firebase">
+    TMT requires Firebase for authentication, database, and cloud functions. Set up your Firebase project:
+
+    ### 1. Create Firebase Project
+
+    1. Go to [Firebase Console](https://console.firebase.google.com/)
+    2. Click "Add project" and follow the setup wizard
+    3. Enable Google Analytics (optional)
+
+    ### 2. Enable Required Services
+
+    Enable these Firebase services:
+
+    - **Authentication**: Enable Email/Password provider
+    - **Cloud Firestore**: Create database in production mode
+    - **Cloud Functions**: Enable billing for your project
+    - **Cloud Storage**: Enable for file uploads
+
+    ### 3. Get Firebase Configuration
+
+    1. In Firebase Console, go to Project Settings
+    2. Scroll to "Your apps" section
+    3. Click the web icon to add a web app
+    4. Copy the Firebase configuration object
+
+    ### 4. Update Firebase Config
+
+    Open `src/guards/firebase/Firebase.js` and replace the configuration:
+
+    ```javascript src/guards/firebase/Firebase.js
+    const firebaseConfig = {
+      apiKey: "AIza...",
+      authDomain: "your-project.firebaseapp.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abc123",
+      measurementId: "G-XXXXXXXXXX"
+    };
+    ```
+
+    <Warning>
+      **Never commit Firebase credentials to version control!** Use environment variables for production deployments.
+    </Warning>
+
+    ### 5. Set Up Firestore Collections
+
+    Create these collections in Firestore:
+
+    ```javascript
+    // Required collections
+    collections: [
+      'u_staff',        // Staff users
+      'u_clients',      // Client users
+      'u_collaborators',// Collaborator users
+      'u_customers',    // Customer users
+      'events',         // Events
+      'event_venues',   // Venues
+      'tickets',        // Tickets
+      'transactions',   // Transactions
+      'offices',        // Sales offices
+      'portals',        // Office portals
+      'contracts',      // Contracts
+      'payouts',        // Payouts
+      'orders',         // Orders
+      'setup'           // Platform configuration
+    ]
+    ```
+
+    ### 6. Deploy Cloud Functions
+
+    TMT uses numerous Cloud Functions. Ensure these functions are deployed:
+
+    ```javascript src/guards/firebase/Firebase.js
+    // Authentication
+    - validate_user_platform
+    - create_staff
+    - create_client
+    - create_collaborator
+
+    // Tickets
+    - tickets_generate
+    - tickets_list_event
+    - tickets_individual
+
+    // Transactions
+    - total_sales
+    - total_sales_client
+    - sold_by_office
+    - sold_by_usbs
+
+    // Conciliation
+    - conciliation_data
+    - conciliation_data_banco
+    - conciliation_data_cia
+    - noconciliation_data_b
+    - noconciliation_data_cia
+    - conciliation_summary
+
+    // And more...
+    ```
+  </Step>
+
+  <Step title="Configure Environment Variables (Optional)">
+    For production deployments, use environment variables. Create a `.env` file:
+
+    ```bash .env
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+    VITE_FIREBASE_PROJECT_ID=your_project_id
+    VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+    VITE_FIREBASE_APP_ID=your_app_id
+    VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+    ```
+
+    Then update `Firebase.js` to use environment variables:
+
+    ```javascript src/guards/firebase/Firebase.js
+    const firebaseConfig = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    };
+    ```
+
+    <Note>
+      Vite uses `import.meta.env` instead of `process.env` for environment variables. All variables must be prefixed with `VITE_`.
+    </Note>
+  </Step>
+
+  <Step title="Start Development Server">
+    Launch the Vite development server:
+
+    ```bash
+    npm run dev
+    ```
+
+    The application will start on `http://localhost:5173` (default Vite port).
+
+    You should see output similar to:
+
+    ```bash
+    VITE v4.5.3  ready in 523 ms
+
+    ➜  Local:   http://localhost:5173/
+    ➜  Network: use --host to expose
+    ➜  press h to show help
+    ```
+
+    <Note>
+      Vite's Hot Module Replacement (HMR) enables instant updates without full page reloads during development.
+    </Note>
+  </Step>
+
+  <Step title="Verify Installation">
+    Open your browser and navigate to `http://localhost:5173`.
+
+    You should see the TMT login page. If you see any errors:
+
+    1. Check the browser console for JavaScript errors
+    2. Verify Firebase configuration is correct
+    3. Ensure all npm packages installed successfully
+    4. Check that Node.js version is 16+
+
+    ### Test the Setup
+
+    The application uses several key entry points:
+
+    ```javascript src/main.jsx
+    import { Provider } from "react-redux";
+    import { BrowserRouter } from "react-router-dom";
+    import { PersistGate } from 'redux-persist/integration/react';
+    import { AuthProvider } from "src/guards/firebase/FirebaseContext";
+    import store, { persistor } from "./store/Store";
+
+    ReactDOM.createRoot(document.getElementById("root")).render(
+      <Provider store={store}>
+        <Suspense fallback={<Spinner />}>
+          <PersistGate loading={null} persistor={persistor}>
+            <BrowserRouter>
+              <ToastContainer />
+              <AuthProvider>
+                <App />
+              </AuthProvider>
+            </BrowserRouter>
+          </PersistGate>
+        </Suspense>
+      </Provider>
+    );
+    ```
+
+    The app initializes:
+    - Redux store with persistence
+    - React Router for navigation
+    - Firebase authentication context
+    - Toast notifications
+    - Material-UI theming
+  </Step>
+</Steps>
+
+## Build Commands
+
+TMT includes several build commands for different environments:
+
+<CodeGroup>
+```bash Development
+# Start dev server with hot reload
+npm run dev
+```
+
+```bash Production Server
+# Start production mode dev server
+npm run prod
+```
+
+```bash Build for Production
+# Build optimized production bundle
+npm run build:prod
+```
+
+```bash Build for Development
+# Build with development mode
+npm run build:dev
+```
+
+```bash Preview Build
+# Preview production build locally
+npm run preview
+```
+
+```bash Linting
+# Run ESLint on all JS/JSX files
+npm run lint
+```
+</CodeGroup>
+
+## Project Structure
+
+Understanding the TMT project structure:
+
+```
+trademastertransactions-tmt/
+├── src/
+│   ├── main.jsx                 # Application entry point
+│   ├── App.jsx                  # Root component with routing
+│   ├── index.css                # Global styles
+│   ├── assets/                  # Static assets (images, fonts)
+│   ├── components/              # React components
+│   │   ├── apps/                # Feature-specific components
+│   │   │   ├── events/          # Event management
+│   │   │   ├── offices/         # Office management
+│   │   │   ├── transactions/    # Transaction components
+│   │   │   ├── conciliations/   # Conciliation features
+│   │   │   └── ...
+│   │   ├── forms/               # Form components
+│   │   ├── shared/              # Shared/common components
+│   │   └── dashboards/          # Dashboard components
+│   ├── guards/                  # Authentication & authorization
+│   │   ├── firebase/            # Firebase integration
+│   │   ├── authGuard/           # Auth guards and hooks
+│   │   └── contexts/            # CASL ability contexts
+│   ├── layouts/                 # Layout components
+│   │   ├── full/                # Full layout with sidebar
+│   │   └── blank/               # Blank layout (login, etc.)
+│   ├── routes/                  # React Router configuration
+│   │   └── Router.js            # Main routing logic
+│   ├── store/                   # Redux Toolkit store
+│   │   ├── Store.js             # Store configuration
+│   │   ├── apps/                # Feature slices
+│   │   ├── customizer/          # Theme customization
+│   │   └── setup/               # Platform setup
+│   ├── theme/                   # Material-UI theme
+│   ├── utils/                   # Utility functions
+│   ├── views/                   # Page-level views
+│   │   ├── authentication/      # Auth pages
+│   │   ├── dashboards/          # Dashboard pages
+│   │   └── ...
+│   └── _mockApis/               # Mock API data (development)
+├── public/                      # Public static files
+├── index.html                   # HTML template
+├── vite.config.js              # Vite configuration
+├── package.json                # Dependencies and scripts
+└── .eslintrc.cjs               # ESLint configuration
+```
+
+## Configuration Files
+
+### Vite Configuration
+
+The Vite config includes JSX loader and path aliases:
+
+```javascript vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+import svgr from '@svgr/rollup';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      src: resolve(__dirname, 'src'),
+    },
+  },
+  esbuild: {
+    loader: 'jsx',
+    include: /src\/.*\.jsx?$/,
+  },
+  plugins: [svgr(), react()],
+});
+```
+
+### ESLint Configuration
+
+The project uses ESLint for code quality:
+
+```bash
+# Run linter
+npm run lint
+
+# Auto-fix issues
+npm run lint -- --fix
+```
+
+## Next Steps
+
+Now that TMT is installed:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Complete the quick start guide
+  </Card>
+  <Card title="Firebase Setup" icon="fire" href="/firebase-setup">
+    Detailed Firebase configuration
+  </Card>
+  <Card title="User Management" icon="users" href="/user-management">
+    Set up your first users
+  </Card>
+  <Card title="Development Guide" icon="code" href="/development">
+    Learn development best practices
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="npm install fails">
+    If package installation fails:
+    
+    1. Delete `node_modules` and `package-lock.json`:
+       ```bash
+       rm -rf node_modules package-lock.json
+       ```
+    2. Clear npm cache:
+       ```bash
+       npm cache clean --force
+       ```
+    3. Reinstall:
+       ```bash
+       npm install
+       ```
+    4. If issues persist, check Node.js version:
+       ```bash
+       node --version
+       # Should be v16.x or higher
+       ```
+  </Accordion>
+
+  <Accordion title="Vite build errors">
+    Common Vite build issues:
+    
+    1. **Port already in use**: Change port in `vite.config.js` or kill the process:
+       ```bash
+       lsof -ti:5173 | xargs kill -9
+       ```
+    2. **Module resolution errors**: Verify the `src` alias in `vite.config.js`
+    3. **JSX syntax errors**: Ensure `.jsx` extension is used for JSX files
+  </Accordion>
+
+  <Accordion title="Firebase connection issues">
+    If Firebase isn't connecting:
+    
+    1. Verify all Firebase config values are correct
+    2. Check Firebase project is in Blaze (pay-as-you-go) plan
+    3. Ensure Firestore and Authentication are enabled
+    4. Check browser console for specific Firebase errors
+    5. Verify network/firewall isn't blocking Firebase domains
+  </Accordion>
+
+  <Accordion title="Import path errors">
+    If you see import errors:
+    
+    1. TMT uses `src/` alias for absolute imports
+    2. Verify `vite.config.js` has the alias configured
+    3. Restart the dev server after config changes
+    4. Check imports use `src/` prefix:
+       ```javascript
+       import MyComponent from 'src/components/MyComponent';
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Additional Resources
+
+<CardGroup cols={3}>
+  <Card title="Vite Docs" icon="bolt" href="https://vitejs.dev">
+    Official Vite documentation
+  </Card>
+  <Card title="Firebase Docs" icon="fire" href="https://firebase.google.com/docs">
+    Firebase documentation
+  </Card>
+  <Card title="Material-UI" icon="palette" href="https://mui.com">
+    Material-UI component library
+  </Card>
+  <Card title="Redux Toolkit" icon="store" href="https://redux-toolkit.js.org">
+    Redux Toolkit documentation
+  </Card>
+  <Card title="React Router" icon="route" href="https://reactrouter.com">
+    React Router documentation
+  </Card>
+  <Card title="Formik" icon="forms" href="https://formik.org">
+    Formik forms library
+  </Card>
+</CardGroup>
+
+<Note>
+  Need help? Check the browser console and Firebase Console logs for detailed error messages.
+</Note>

@@ -1,0 +1,317 @@
+---
+title: 'Helper Functions'
+description: 'Utility functions for encryption, date formatting, validation, and data manipulation'
+---
+
+## Overview
+
+The TMT platform provides a comprehensive set of helper functions for common operations including encryption, date/time formatting, URL validation, string manipulation, and data processing.
+
+## Encryption
+
+### encrypt()
+
+Encrypts data using AES encryption with a randomly generated initialization vector (IV).
+
+<ParamField path="data" type="string" required>
+  The plain text data to encrypt
+</ParamField>
+
+<ParamField path="secretKeyHex" type="string" required>
+  The secret key in hexadecimal format for encryption
+</ParamField>
+
+**Returns:** `string` - Encrypted data in format `encryptedData:ivBase64`
+
+```javascript
+import { encrypt } from 'utils/encryption';
+
+const secretKey = '0123456789abcdef0123456789abcdef';
+const plainText = 'Sensitive user data';
+const encrypted = encrypt(plainText, secretKey);
+// Returns: "U2FsdGVkX1...:kT8vF2nQ...=="
+```
+
+**Implementation Details:**
+- Uses CryptoJS AES encryption
+- Generates a random 16-byte IV for each encryption
+- Returns encrypted data and IV as Base64-encoded strings separated by colon
+
+### decrypt()
+
+Decrypts AES-encrypted data using the provided secret key.
+
+<ParamField path="encryptedString" type="string" required>
+  The encrypted string in format `encryptedData:ivBase64`
+</ParamField>
+
+<ParamField path="secretKeyHex" type="string" required>
+  The secret key in hexadecimal format used for encryption
+</ParamField>
+
+**Returns:** `string` - Decrypted plain text in UTF-8 format
+
+```javascript
+import { decrypt } from 'utils/encryption';
+
+const secretKey = '0123456789abcdef0123456789abcdef';
+const encryptedData = 'U2FsdGVkX1...:kT8vF2nQ...==';
+const decrypted = decrypt(encryptedData, secretKey);
+// Returns: "Sensitive user data"
+```
+
+**Source:** `src/utils/encryption.js:4-42`
+
+## Date & Time Formatting
+
+### convertTimestamp()
+
+Converts Firebase timestamp object to formatted date string.
+
+<ParamField path="timestamp" type="object" required>
+  Firebase timestamp object with `seconds` and `nanoseconds` properties
+</ParamField>
+
+**Returns:** `string | null` - Formatted date string in `DD/MM/YYYY hh:mm:ss a` format or null if invalid
+
+```javascript
+import { convertTimestamp } from 'utils/convertTimestamp';
+
+const firebaseTimestamp = { seconds: 1678901234, nanoseconds: 500000000 };
+const formatted = convertTimestamp(firebaseTimestamp);
+// Returns: "15/03/2023 10:47:14 pm"
+```
+
+### formattedDate()
+
+Formats a JavaScript Date object or date string to a long format.
+
+<ParamField path="date" type="Date | string" required>
+  Date object or date string to format
+</ParamField>
+
+**Returns:** `string | null` - Formatted date string in `DD/MM/YYYY hh:mm:ss a` format or null if invalid
+
+```javascript
+import { formattedDate } from 'utils/convertTimestamp';
+
+const date = new Date('2023-12-25T14:30:00');
+const formatted = formattedDate(date);
+// Returns: "25/12/2023 02:30:00 pm"
+```
+
+### formattedShortDate()
+
+Formats a date to a short format without time.
+
+<ParamField path="date" type="Date | string" required>
+  Date object or date string to format
+</ParamField>
+
+**Returns:** `string | null` - Formatted date string in `DD/MM/YYYY` format or null if invalid
+
+```javascript
+import { formattedShortDate } from 'utils/convertTimestamp';
+
+const date = new Date('2023-12-25T14:30:00');
+const formatted = formattedShortDate(date);
+// Returns: "25/12/2023"
+```
+
+### formatDateLocal()
+
+Formats an ISO date string to local time format.
+
+<ParamField path="isoString" type="string" required>
+  ISO 8601 date string
+</ParamField>
+
+**Returns:** `string` - Formatted date string in `YYYY-MM-DD hh:mm:ss AM/PM` format
+
+```javascript
+import { formatDateLocal } from 'utils/convertTimestamp';
+
+const isoDate = '2023-12-25T14:30:00.000Z';
+const formatted = formatDateLocal(isoDate);
+// Returns: "2023-12-25 02:30:00 PM"
+```
+
+**Source:** `src/utils/convertTimestamp.js:3-44`
+
+### formatDateToDDMM()
+
+Formats a date string to DD/MM format.
+
+<ParamField path="dateString" type="string" required>
+  Date string to format
+</ParamField>
+
+**Returns:** `string` - Date in `DD/MM` format
+
+```javascript
+import { formatDateToDDMM } from 'utils/maxValue';
+
+const date = '2023-12-25';
+const formatted = formatDateToDDMM(date);
+// Returns: "25/12"
+```
+
+**Source:** `src/utils/maxValue.js:6-11`
+
+## String Utilities
+
+### initials()
+
+Extracts initials from a person's name.
+
+<ParamField path="name" type="string" default="">
+  Full name to extract initials from
+</ParamField>
+
+**Returns:** `string` - Initials from first and last name
+
+```javascript
+import { initials } from 'utils/getNameInitials';
+
+const fullName = 'Juan Carlos Martinez Lopez';
+const userInitials = initials(fullName);
+// Returns: "JL"
+
+const singleName = 'Maria';
+const singleInitial = initials(singleName);
+// Returns: "M"
+```
+
+**Implementation:** Extracts the first letter of the first word and the first letter of the last word from the name.
+
+**Source:** `src/utils/getNameInitials.js:1-3`
+
+## Validation
+
+### isValidHttpUrl()
+
+Validates if a string is a valid HTTP/HTTPS URL.
+
+<ParamField path="string" type="string" required>
+  The string to validate as a URL
+</ParamField>
+
+**Returns:** `boolean` - True if valid URL, false otherwise
+
+```javascript
+import { isValidHttpUrl } from 'utils/checkURL';
+
+const validUrl = isValidHttpUrl('https://example.com');
+// Returns: true
+
+const invalidUrl = isValidHttpUrl('not a url');
+// Returns: false
+
+const noProtocol = isValidHttpUrl('example.com');
+// Returns: false
+```
+
+**Source:** `src/utils/checkURL.js:1-12`
+
+## Data Processing
+
+### getMaxTotal()
+
+Finds the maximum total value from an array of objects.
+
+<ParamField path="data" type="array" required>
+  Array of objects containing a `total` property
+</ParamField>
+
+**Returns:** `number | null` - Maximum total value or null if array is empty
+
+```javascript
+import { getMaxTotal } from 'utils/maxValue';
+
+const salesData = [
+  { date: '2023-01-01', total: 1500 },
+  { date: '2023-01-02', total: 2300 },
+  { date: '2023-01-03', total: 1800 }
+];
+
+const maxSale = getMaxTotal(salesData);
+// Returns: 2300
+
+const emptyData = getMaxTotal([]);
+// Returns: null
+```
+
+**Source:** `src/utils/maxValue.js:1-4`
+
+## State Management
+
+### Event Types
+
+Global state management for event types.
+
+```javascript
+import { eventsType, setEventsType } from 'utils/eventsType';
+
+// Get current event types
+const types = eventsType;
+
+// Update event types
+setEventsType([
+  { id: 1, name: 'Concert' },
+  { id: 2, name: 'Sports' },
+  { id: 3, name: 'Theater' }
+]);
+```
+
+**Source:** `src/utils/eventsType.js:1-7`
+
+### Locations
+
+Global state management for locations.
+
+```javascript
+import { locations, setLocations } from 'utils/locations';
+
+// Get current locations
+const currentLocations = locations;
+
+// Update locations
+setLocations([
+  { id: 1, name: 'Stadium A', capacity: 50000 },
+  { id: 2, name: 'Arena B', capacity: 15000 }
+]);
+```
+
+**Source:** `src/utils/locations.js:1-7`
+
+## Error Messages
+
+Predefined error messages for authentication errors.
+
+```javascript
+import errorMessages from 'utils/errorMessages';
+
+const getErrorMessage = (errorCode) => {
+  return errorMessages[errorCode] || errorMessages['unknown'];
+};
+
+// Usage example
+try {
+  // Some authentication operation
+} catch (error) {
+  const message = getErrorMessage(error.code);
+  // Returns localized error message
+}
+```
+
+### Available Error Codes
+
+- `auth/email-already-exists`: Email already in use
+- `auth/invalid-email`: Invalid email address
+- `auth/invalid-password`: Incorrect password
+- `auth/too-many-requests`: Too many failed attempts
+- `auth/user-not-found`: User not found
+- `auth/invalid-login-credentials`: Invalid credentials
+- `unknown`: Default error message
+
+**Source:** `src/utils/errorMessages.js:1-11`

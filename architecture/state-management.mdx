@@ -1,0 +1,525 @@
+---
+title: State Management
+description: Redux Toolkit store configuration, slices, persistence, and state management patterns in TMT
+---
+
+## Overview
+
+TradeMaster Transactions uses **Redux Toolkit** for centralized state management with **redux-persist** for local storage persistence. The store is organized into feature-based slices, each managing its own domain of application state.
+
+## Store Configuration
+
+The Redux store is configured in `src/store/Store.js` with persistence and serialization middleware.
+
+### Store Setup
+
+```js src/store/Store.js
+import { configureStore } from '@reduxjs/toolkit';
+import { persistReducer, persistStore } from 'redux-persist';
+import storage from 'redux-persist/lib/storage';
+
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['auth', 'customizer', 'setup']
+};
+
+const rootReducer = combineReducers({
+  customizer: CustomizerReducer,
+  setup: SetupReducer,
+  auth: authReducer,
+  staff: StaffReducer,
+  // ... other reducers
+});
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
+});
+
+export const persistor = persistStore(store);
+```
+
+<Note>
+Only `auth`, `customizer`, and `setup` slices are persisted to localStorage. Other slices are re-fetched on app load.
+</Note>
+
+### Middleware Configuration
+
+The serializable check is configured to ignore redux-persist actions that contain non-serializable values:
+
+- `FLUSH`: Clear persist cache
+- `REHYDRATE`: Load persisted state
+- `PAUSE`: Pause persistence
+- `PERSIST`: Start persistence
+- `PURGE`: Remove persisted state
+- `REGISTER`: Register reducers
+
+## Store Structure
+
+The store is organized into 22+ feature slices:
+
+### User Management
+
+<CodeGroup>
+```js Staff Slice
+// src/store/apps/Users/StaffSlice.js
+import { createSlice } from '@reduxjs/toolkit';
+
+const staffSlice = createSlice({
+  name: 'staff',
+  initialState: {
+    staff: [],
+    staffSearch: '',
+    selectedStaff: null,
+  },
+  reducers: {
+    setStaff: (state, action) => {
+      state.staff = action.payload;
+    },
+    selectStaff: (state, action) => {
+      state.selectedStaff = action.payload;
+    },
+    searchStaff: (state, action) => {
+      state.staffSearch = action.payload;
+    },
+  },
+});
+```
+
+```js Clients Slice
+// src/store/apps/Users/ClientsSlice.js
+const clientsSlice = createSlice({
+  name: 'clients',
+  initialState: {
+    clients: [],
+    selectedClient: null,
+  },
+  reducers: {
+    setClients: (state, action) => {
+      state.clients = action.payload;
+    },
+  },
+});
+```
+</CodeGroup>
+
+### Authentication State
+
+The auth slice manages user authentication state and user profile:
+
+```js src/store/apps/auth/authSlice.js
+import { createSlice } from '@reduxjs/toolkit';
+import moment from 'moment';
+
+const initialState = {
+  isAuthenticated: false,
+  isInitialized: false,
+  user: null,
+};
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    authStateChanged(state, action) {
+      const { isAuthenticated, user } = action.payload;
+
+      if(user !== null){
+        const convertTimestamp = (timestamp) => {
+          if (timestamp && timestamp.seconds) {
+            const date = new Date(
+              timestamp.seconds * 1000 + 
+              timestamp.nanoseconds / 1000000
+            );
+            return moment(date).format('DD/MM/YYYY - hh:mm:ss a');
+          }
+          return null;
+        };
+
+        user.date.last_update = convertTimestamp(user.date?.last_update)
+        user.date.last_access = convertTimestamp(user.date?.last_access)
+      }
+
+      state.isAuthenticated = isAuthenticated;
+      state.isInitialized = true;
+      state.user = user;
+    },
+  },
+});
+
+export const { authStateChanged } = authSlice.actions;
+```
+
+<Accordion title="User Object Structure">
+The user object stored in auth state contains:
+- `uid`: Firebase user ID
+- `email`: User email address
+- `name`: Display name
+- `avatar`: Profile image URL
+- `account_type`: Role (Administrador, Coordinador, etc.)
+- `phone`: Phone number
+- `address`: Address object with line, zipcode, city, country
+- `date.last_access`: Last login timestamp (formatted)
+- `date.last_update`: Last profile update timestamp
+- `last_IP`: Last login IP address
+</Accordion>
+
+### Customizer State
+
+Manages UI customization preferences:
+
+```js src/store/customizer/CustomizerSlice.js
+const initialState = {
+  activeDir: 'ltr',
+  activeMode: 'light',
+  activeTheme: 'BLUE_THEME',
+  SidebarWidth: 270,
+  MiniSidebarWidth: 87,
+  TopbarHeight: 70,
+  isLayout: 'boxed',
+  isCollapse: false,
+  isSidebarHover: false,
+  isMobileSidebar: false,
+  isHorizontal: false,
+  isLanguage: 'en',
+  isCardShadow: true,
+  borderRadius: 7,
+};
+
+const CustomizerSlice = createSlice({
+  name: 'customizer',
+  initialState,
+  reducers: {
+    setTheme: (state, action) => {
+      state.activeTheme = action.payload;
+    },
+    setDarkMode: (state, action) => {
+      state.activeMode = action.payload;
+    },
+    toggleSidebar: (state) => {
+      state.isCollapse = !state.isCollapse;
+    },
+    toggleMobileSidebar: (state) => {
+      state.isMobileSidebar = !state.isMobileSidebar;
+    },
+  },
+});
+```
+
+### Transaction & Event Management
+
+<CardGroup cols={2}>
+  <Card title="Transactions" icon="money-bill-transfer">
+    src/store/apps/transactions/transactionsSlice.js
+  </Card>
+  <Card title="Events" icon="calendar">
+    src/store/apps/events/EventsSlice.js
+  </Card>
+  <Card title="Tickets" icon="ticket">
+    src/store/apps/tickets/TicketsSlice.js
+  </Card>
+  <Card title="Orders" icon="cart-shopping">
+    src/store/apps/orders/ordersSlice.js
+  </Card>
+</CardGroup>
+
+### Office Management
+
+```js Office State Slices
+// Main offices list
+src/store/apps/offices/OfficesSlice.js
+
+// Active office transactions
+src/store/apps/offices/OfficeTransactions.js
+
+// Active office events
+src/store/apps/offices/ActiveOfficeEventSlice.js
+
+// Active office collaborators
+src/store/apps/offices/ActiveOfficeCollaboratorsSlice.js
+```
+
+## Slice Pattern
+
+All slices follow a consistent pattern using Redux Toolkit's `createSlice`:
+
+<Steps>
+  <Step title="Define Initial State">
+    Set default values for all state properties
+  </Step>
+  <Step title="Create Slice">
+    Use createSlice with name, initialState, and reducers
+  </Step>
+  <Step title="Export Actions">
+    Export auto-generated action creators
+  </Step>
+  <Step title="Export Reducer">
+    Export the reducer function as default
+  </Step>
+  <Step title="Add to Store">
+    Import and add to root reducer in Store.js
+  </Step>
+</Steps>
+
+### Example Slice Implementation
+
+```js Example Slice Pattern
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  items: [],
+  loading: false,
+  error: null,
+  selectedItem: null,
+};
+
+const exampleSlice = createSlice({
+  name: 'example',
+  initialState,
+  reducers: {
+    setItems: (state, action) => {
+      state.items = action.payload;
+      state.loading = false;
+    },
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
+      state.loading = false;
+    },
+    selectItem: (state, action) => {
+      state.selectedItem = action.payload;
+    },
+  },
+});
+
+export const { setItems, setLoading, setError, selectItem } = 
+  exampleSlice.actions;
+export default exampleSlice.reducer;
+```
+
+## Using Redux State
+
+### Reading State
+
+Use the `useSelector` hook to read state in components:
+
+```jsx Component Example
+import { useSelector } from 'react-redux';
+
+function MyComponent() {
+  const user = useSelector((state) => state.auth.user);
+  const theme = useSelector((state) => state.customizer.activeTheme);
+  const transactions = useSelector((state) => state.Transactions.items);
+
+  return (
+    <div>
+      <h1>Welcome, {user?.name}</h1>
+      <p>Theme: {theme}</p>
+    </div>
+  );
+}
+```
+
+### Dispatching Actions
+
+Use the `useDispatch` hook to dispatch actions:
+
+```jsx Dispatching Actions
+import { useDispatch } from 'react-redux';
+import { setTheme, toggleSidebar } from 'src/store/customizer/CustomizerSlice';
+import { authStateChanged } from 'src/store/apps/auth/authSlice';
+
+function SettingsComponent() {
+  const dispatch = useDispatch();
+
+  const handleThemeChange = (theme) => {
+    dispatch(setTheme(theme));
+  };
+
+  const handleToggleSidebar = () => {
+    dispatch(toggleSidebar());
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleThemeChange('DARK_THEME')}>
+        Dark Mode
+      </button>
+      <button onClick={handleToggleSidebar}>
+        Toggle Sidebar
+      </button>
+    </div>
+  );
+}
+```
+
+## Async Operations
+
+For async operations like Firebase queries, use async thunks:
+
+```js Async Thunk Example
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { Firestore } from 'src/guards/firebase/Firebase';
+
+// Define async thunk
+export const fetchEvents = createAsyncThunk(
+  'events/fetchEvents',
+  async (clientId) => {
+    const snapshot = await Firestore
+      .collection('events')
+      .where('client_id', '==', clientId)
+      .get();
+    
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  }
+);
+
+// Handle in slice
+const eventsSlice = createSlice({
+  name: 'events',
+  initialState: {
+    events: [],
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchEvents.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchEvents.fulfilled, (state, action) => {
+        state.events = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchEvents.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.loading = false;
+      });
+  },
+});
+```
+
+## State Persistence
+
+### Persisted Slices
+
+Three slices are persisted to localStorage:
+
+1. **auth**: User authentication state
+2. **customizer**: UI preferences
+3. **setup**: Platform configuration
+
+### Rehydration
+
+The `PersistGate` component delays rendering until state is rehydrated:
+
+```jsx src/main.jsx
+<PersistGate loading={null} persistor={persistor}>
+  <BrowserRouter>
+    {/* App content */}
+  </BrowserRouter>
+</PersistGate>
+```
+
+### Clearing Persisted State
+
+```js Clear Persistence
+import { persistor } from 'src/store/Store';
+
+// Purge all persisted state
+await persistor.purge();
+
+// Flush pending persistence
+await persistor.flush();
+```
+
+## Complete Store Structure
+
+```
+Redux Store
+├── auth                    # Authentication state (persisted)
+├── customizer              # UI customization (persisted)
+├── setup                   # Platform setup (persisted)
+├── staff                   # Staff users
+├── collaborators           # Collaborator users
+├── clients                 # Client users
+├── customers               # Customer users
+├── contracts               # Client contracts
+├── addendums              # Contract addendums
+├── tickets                 # Event tickets
+├── queryTickets           # Ticket queries
+├── eventVenues            # Event venues
+├── events                  # Events
+├── credentials            # Event credentials
+├── notifications          # Notifications
+├── Transactions           # Transactions
+├── offices                # Office locations
+├── officeEvents           # Active office events
+├── officeTransactions     # Office transactions
+├── officeCollaborators    # Office collaborators
+├── paymentsMethod         # Payment methods
+├── payouts                # Payouts
+├── custodyAccounts        # Custody accounts
+├── orders                  # Orders
+├── ordersPayout           # Order payouts
+├── contractsLegal         # Legal contracts
+├── portals                # Client portals
+├── documents              # Documents
+└── marketing              # Marketing campaigns
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep slices focused">
+    Each slice should manage a single domain of state. Don't create mega-slices.
+  </Accordion>
+  
+  <Accordion title="Use immer's draft state">
+    Redux Toolkit uses Immer, so you can write "mutating" logic that's actually immutable.
+  </Accordion>
+  
+  <Accordion title="Normalize complex data">
+    For relational data, consider normalizing with objects keyed by ID.
+  </Accordion>
+  
+  <Accordion title="Selective persistence">
+    Only persist critical state. Large data sets should be re-fetched.
+  </Accordion>
+  
+  <Accordion title="Use selectors">
+    Create memoized selectors with reselect for derived state.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Routing" href="/architecture/routing" icon="route">
+    Learn about route configuration
+  </Card>
+  <Card title="Guards" href="/architecture/guards" icon="lock">
+    Understand authentication guards
+  </Card>
+  <Card title="API Integration" href="/guides/api-integration" icon="plug">
+    Connect to Firebase APIs
+  </Card>
+  <Card title="Testing" href="/testing/redux" icon="flask">
+    Test Redux slices and actions
+  </Card>
+</CardGroup>

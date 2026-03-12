@@ -1,0 +1,248 @@
+---
+title: 'Store Overview'
+description: 'Redux store configuration and state management architecture'
+---
+
+## Introduction
+
+The TradeMaster Transactions platform uses Redux Toolkit for centralized state management with Redux Persist for state persistence across sessions. The store combines multiple feature-specific slices into a unified state tree.
+
+## Store Configuration
+
+The main store is configured in `src/store/Store.js` using Redux Toolkit's `configureStore`.
+
+### Basic Setup
+
+```javascript
+import { configureStore } from '@reduxjs/toolkit';
+import storage from 'redux-persist/lib/storage';
+import { combineReducers } from 'redux';
+import { persistReducer, persistStore } from 'redux-persist';
+
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
+});
+
+export const persistor = persistStore(store);
+```
+
+## Persistence Configuration
+
+The store uses Redux Persist to save specific slices to localStorage.
+
+<ParamField path="key" type="string" default="root">
+  The key used to store the persisted state in localStorage
+</ParamField>
+
+<ParamField path="storage" type="object">
+  Storage engine (defaults to localStorage)
+</ParamField>
+
+<ParamField path="whitelist" type="array">
+  Array of reducer keys to persist. Only `auth`, `customizer`, and `setup` are persisted.
+</ParamField>
+
+```javascript
+const persistConfig = {
+  key: 'root',
+  storage,
+  whitelist: ['auth', 'customizer', 'setup']
+};
+```
+
+## State Structure
+
+The Redux store combines the following state slices:
+
+### Core Slices
+
+<ParamField path="auth" type="object">
+  Authentication state including user data and auth status
+</ParamField>
+
+<ParamField path="customizer" type="object">
+  UI customization settings (theme, layout, sidebar)
+</ParamField>
+
+<ParamField path="setup" type="object">
+  Application setup and configuration data
+</ParamField>
+
+### User Management
+
+<ParamField path="staff" type="object">
+  Staff user management state
+</ParamField>
+
+<ParamField path="collaborators" type="object">
+  Collaborator user data and search
+</ParamField>
+
+<ParamField path="clients" type="object">
+  Client user management
+</ParamField>
+
+<ParamField path="customers" type="object">
+  Customer user data
+</ParamField>
+
+### Contracts & Legal
+
+<ParamField path="contracts" type="object">
+  Contract management state
+</ParamField>
+
+<ParamField path="addendums" type="object">
+  Contract addendums
+</ParamField>
+
+<ParamField path="contractsLegal" type="object">
+  Legal contract processing
+</ParamField>
+
+### Events & Venues
+
+<ParamField path="events" type="object">
+  Event management and active events
+</ParamField>
+
+<ParamField path="eventVenues" type="object">
+  Venue information for events
+</ParamField>
+
+### Financial Operations
+
+<ParamField path="Transactions" type="object">
+  Transaction records and search
+</ParamField>
+
+<ParamField path="orders" type="object">
+  Order management
+</ParamField>
+
+<ParamField path="ordersPayout" type="object">
+  Payout order processing
+</ParamField>
+
+<ParamField path="payouts" type="object">
+  Payout management state
+</ParamField>
+
+<ParamField path="paymentsMethod" type="object">
+  Payment method configuration
+</ParamField>
+
+<ParamField path="custodyAccounts" type="object">
+  Custody account management
+</ParamField>
+
+### Office & Ticketing
+
+<ParamField path="offices" type="object">
+  Office locations and active offices
+</ParamField>
+
+<ParamField path="officeEvents" type="object">
+  Events associated with specific offices
+</ParamField>
+
+<ParamField path="officeTransactions" type="object">
+  Office-specific transaction data
+</ParamField>
+
+<ParamField path="officeCollaborators" type="object">
+  Collaborators assigned to offices
+</ParamField>
+
+<ParamField path="tickets" type="object">
+  Ticket management
+</ParamField>
+
+<ParamField path="queryTickets" type="object">
+  Ticket query and search
+</ParamField>
+
+### Additional Features
+
+<ParamField path="credentials" type="object">
+  User credentials management
+</ParamField>
+
+<ParamField path="notifications" type="object">
+  System notifications
+</ParamField>
+
+<ParamField path="portals" type="object">
+  Portal configuration and access
+</ParamField>
+
+<ParamField path="documents" type="object">
+  Document management
+</ParamField>
+
+<ParamField path="marketing" type="object">
+  Marketing campaign data
+</ParamField>
+
+## Middleware Configuration
+
+The store is configured with custom middleware settings to handle Redux Persist actions:
+
+```javascript
+middleware: (getDefaultMiddleware) =>
+  getDefaultMiddleware({
+    serializableCheck: {
+      ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+    },
+  })
+```
+
+This configuration ignores serialization checks for Redux Persist actions, which contain non-serializable values.
+
+## Usage
+
+### Accessing the Store
+
+```javascript
+import { store } from './store/Store';
+
+// Get current state
+const state = store.getState();
+
+// Access specific slice
+const authState = state.auth;
+const transactions = state.Transactions;
+```
+
+### With React Components
+
+```javascript
+import { useSelector, useDispatch } from 'react-redux';
+
+function MyComponent() {
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
+  const events = useSelector((state) => state.events.Events);
+  
+  // Component logic
+}
+```
+
+## Best Practices
+
+- **Immutable Updates**: All reducers use Redux Toolkit's Immer integration for immutable state updates
+- **Async Operations**: Use thunks for async operations (Firebase queries, API calls)
+- **Selectors**: Create memoized selectors for derived state
+- **Error Handling**: Each slice includes error state for operation failures
+- **Type Safety**: Consider adding TypeScript for enhanced type safety
+
+## Related Resources
+
+- [Authentication State](/api/store/auth)
+- [Application State Slices](/api/store/apps)

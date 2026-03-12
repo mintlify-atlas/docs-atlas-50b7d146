@@ -1,0 +1,396 @@
+---
+title: Payment Method Management
+description: Configure and manage payment methods for customer transactions
+---
+
+# Payment Method Management
+
+Payment methods in TMT define how customers can pay for event tickets. Each payment method is linked to a custody account and includes specific configuration for processing and reconciliation.
+
+## Overview
+
+Payment methods are stored in the `payments_methods` Firestore collection and configure:
+
+- Accepted payment types and currencies
+- Associated custody accounts for fund collection
+- Client assignment and ownership
+- Processing fees and adjustments
+- Bank account or payment service details
+
+## Payment Method Structure
+
+```javascript
+{
+  name: string,              // Payment method name
+  type: string,              // Payment type (digital, cash, check)
+  currency: string,          // Currency code (USD, VEF)
+  country: string,           // Country code
+  method: string,            // Specific payment method name
+  custody_account: {
+    id: string,              // Custody account ID
+    name: string             // Custody account name
+  },
+  client: {
+    client_id: string,       // Client ID
+    name: string             // Client name
+  },
+  percentage: number,        // Adjustment percentage (0-100)
+  data: Object,              // Method-specific metadata
+  status: boolean            // Active/inactive status
+}
+```
+
+## Creating Payment Methods
+
+<Steps>
+  <Step title="Navigate to Payment Methods">
+    Access the payment methods section and click "Crear Método de Pago" (Create Payment Method).
+    
+    Source: `src/views/payment-method/NewPaymentMethod.js`
+  </Step>
+
+  <Step title="Enter Basic Information">
+    Configure the payment method name:
+    
+    ```javascript
+    // Validation from NewPaymentMethodForm.js:52
+    namePayment: Yup.string().required('Nombre es requerido')
+    ```
+    
+    Use a descriptive name like "Zelle - TMT USD" or "Pago Móvil - Banco Venezuela".
+  </Step>
+
+  <Step title="Select Payment Type">
+    Choose the payment type from available options:
+    
+    - **Digital**: Bank transfers, mobile payments, online services
+    - **Cash**: Physical currency payments
+    - **Check**: Check payments
+    
+    Source: `src/components/apps/payment-method/NewPaymentMethodForm.js:217-236`
+  </Step>
+
+  <Step title="Select Currency">
+    Choose the currency for this payment method:
+    
+    ```javascript
+    // Available currencies from setup
+    const currencies = setup.Setup.currencies.data;
+    ```
+    
+    Common currencies: USD, VEF (Venezuelan Bolívar)
+  </Step>
+
+  <Step title="Assign Client">
+    Select the client that owns this payment method:
+    
+    ```javascript
+    // From NewPaymentMethodForm.js:37-46
+    const fetchClients = async () => {
+      const fireQuery = await Firestore.collection('u_clients').get();
+      const finalClients = [
+        { name: "TradeMaster Transactions", client_id: "TMT" },
+        ...fireQuery.docs.map(doc => ({
+          name: doc.data().name,
+          client_id: doc.id
+        }))
+      ];
+      setClients(finalClients);
+    };
+    ```
+  </Step>
+
+  <Step title="Choose Payment Method">
+    Select the specific payment method. The dropdown is dynamically filtered based on:
+    
+    - Selected payment type
+    - Selected currency
+    - Available methods in payment_data configuration
+    
+    ```javascript
+    // From NewPaymentMethodForm.js:137-165
+    const selectedValues = payment_data.filter(x => 
+      x.type === paymentTypes.find(e => e.name === payment_type).type && 
+      x.currency === currency
+    );
+    ```
+  </Step>
+
+  <Step title="Link Custody Account">
+    Select the custody account where funds will be deposited:
+    
+    <Warning>
+      The custody account must match the payment type, currency, and client. Only compatible custody accounts are shown.
+    </Warning>
+    
+    ```javascript
+    // From NewPaymentMethodForm.js:143-159
+    let queryCustodyAccount = Firestore.collection('custody_accounts')
+      .where('type', '==', payment_type)
+      .where('currency', '==', currency)
+      .where('client.client_id', '==', client_id);
+    ```
+  </Step>
+
+  <Step title="Set Adjustment Percentage">
+    Configure the processing fee or adjustment percentage:
+    
+    ```javascript
+    // Validation from NewPaymentMethodForm.js:59-61
+    percentage: Yup.number()
+      .required('El porcentaje del ajuste es obligatorio')
+      .max(100, 'El porcentaje no puede ser mayor que 100')
+      .integer('El porcentaje debe ser un número entero')
+    ```
+    
+    This percentage is applied to transactions for fee calculation.
+  </Step>
+
+  <Step title="Configure Method-Specific Data">
+    Enter details based on the payment method type:
+    
+    **For Bank Transfers**:
+    - Bank name (from country-specific bank list)
+    - Account number
+    - Account holder name
+    - Routing/SWIFT code
+    
+    **For Mobile Payments**:
+    - Phone number
+    - Provider name
+    - Account ID
+    
+    **For Document-Required Methods**:
+    - ID type (from document_types)
+    - ID number
+    
+    Implementation: `src/components/apps/payment-method/PaymentTypesComponent.js`
+  </Step>
+
+  <Step title="Save Payment Method">
+    Submit the form to create the payment method:
+    
+    ```javascript
+    // From NewPaymentMethodForm.js:84-109
+    const clientObject = clients.find(c => c.client_id === values.client);
+    
+    let toSend = {
+      country: values.Method.country,
+      currency: values.currency,
+      custody_account: {
+        id: values.custody_account.id,
+        name: values.custody_account.name
+      },
+      client: clientObject,
+      data: metadata,
+      method: values.Method.name,
+      name: values.namePayment,
+      percentage: values.percentage,
+      status: true,
+      type: values.payment_type
+    };
+    
+    await Firestore.collection('payments_methods').add(toSend);
+    ```
+  </Step>
+</Steps>
+
+## Dynamic Field Loading
+
+Payment method forms dynamically load fields based on the selected method:
+
+```javascript
+// From NewPaymentMethodForm.js:202-231
+const handleMethodChange = (event, newValue) => {
+  const selectedValues = payment_data.filter(
+    x => x.name === newValue.name
+  )[0];
+  
+  let selectedValuesData = selectedValues?.data;
+  
+  // Add bank data for bank-required methods
+  const bankFields = selectedValuesData.filter(x => x.value === 'bank');
+  if (bankFields.length > 0) {
+    const bankIndex = selectedValuesData.indexOf(bankFields[0]);
+    selectedValuesData = selectedValuesData.map((item, index) => {
+      if (index === bankIndex) {
+        return {
+          ...item,
+          data: banks[selectedValues.country]
+        };
+      }
+      return item;
+    });
+  }
+  
+  // Handle ID document fields
+  const updatedData = selectedValuesData.map((field) => {
+    if (field.value === 'id_number') {
+      return { ...field, type: 'id_document' };
+    }
+    return field;
+  });
+  
+  setMethodData(updatedData);
+};
+```
+
+## Client Assignment Logic
+
+When selecting a client, the system filters available custody accounts:
+
+```javascript
+// From NewPaymentMethodForm.js:246-265
+const handleClientChange = async (newClient) => {
+  if (formik.values.payment_type && formik.values.currency) {
+    let queryCustodyAccount = Firestore.collection('custody_accounts')
+      .where('type', '==', payment_type)
+      .where('currency', '==', currency)
+      .where('client.client_id', '==', newClient);
+    
+    const queryResult = await queryCustodyAccount.get();
+    
+    const CustodyAccountArray = queryResult.docs.map((doc) => ({
+      id: doc.id,
+      name: doc.data().name
+    }));
+    
+    setCustodyAccounts(CustodyAccountArray);
+  }
+};
+```
+
+## Editing Payment Methods
+
+<Steps>
+  <Step title="Access Payment Method">
+    Navigate to the payment methods list and select the method to edit.
+    
+    Source: `src/views/payment-method/EditPaymentMethod.js`
+  </Step>
+
+  <Step title="Modify Configuration">
+    Update any fields except:
+    - Payment type (requires creating new method)
+    - Currency (requires creating new method)
+    - Client (may affect custody account linking)
+  </Step>
+
+  <Step title="Update Custody Account">
+    If needed, change the linked custody account. Ensure it matches the payment type and currency.
+  </Step>
+
+  <Step title="Save Changes">
+    Submit the updated configuration. Active transactions continue using the updated settings.
+  </Step>
+</Steps>
+
+<Warning>
+  Changing a payment method's configuration affects all future transactions. Historical transactions retain their original method data.
+</Warning>
+
+## Viewing Payment Method Details
+
+Access complete payment method information:
+
+```javascript
+// From DisplayPaymentMethod.js:20-35
+const DisplayPaymentMethod = () => {
+  return (
+    <PageContainer title="Detalles Método de Pago">
+      <ParentCard title='Detalles Método de Pago'>
+        <PaymentMethodDetail />
+      </ParentCard>
+    </PageContainer>
+  );
+};
+```
+
+The detail view displays:
+- Payment method name and status
+- Type, currency, and country
+- Linked custody account
+- Assigned client
+- Adjustment percentage
+- Method-specific data fields
+
+## Managing Payment Method Status
+
+Control payment method availability:
+
+- **Active** (`status: true`): Available for customer transactions
+- **Inactive** (`status: false`): Hidden from checkout options
+
+Deactivate payment methods temporarily for:
+- Maintenance windows
+- Account verification
+- Custody account changes
+- Compliance reviews
+
+## Adjustment Percentage Usage
+
+The percentage field calculates processing fees:
+
+```javascript
+// Example calculation
+const transactionAmount = 100.00;
+const adjustmentPercentage = 3; // 3% fee
+const fee = transactionAmount * (adjustmentPercentage / 100);
+const netAmount = transactionAmount - fee;
+// netAmount: $97.00
+```
+
+Common uses:
+- Payment processor fees
+- Platform commissions
+- Currency conversion spreads
+- Administrative charges
+
+## Bank Account Configuration
+
+For bank-based payment methods, the system loads country-specific banks:
+
+```javascript
+// Banks are configured per country
+const banks = {
+  've': [
+    { name: 'Banco de Venezuela', code: '0102' },
+    { name: 'Banco Mercantil', code: '0105' },
+    { name: 'Banesco', code: '0134' },
+    // ... more banks
+  ],
+  'us': [
+    { name: 'Bank of America', code: 'BOA' },
+    { name: 'Chase', code: 'CHASE' },
+    // ... more banks
+  ]
+};
+```
+
+## Best Practices
+
+1. **Clear Naming**: Use descriptive names indicating method, client, and currency
+2. **Verify Custody Links**: Ensure custody account matches payment method configuration
+3. **Set Appropriate Fees**: Configure adjustment percentages accurately
+4. **Test Before Activation**: Verify payment method works before making it active
+5. **Regular Reviews**: Audit payment methods quarterly for accuracy
+6. **Document Changes**: Keep records of configuration changes and reasons
+
+## Integration with Transactions
+
+Payment methods are selected during checkout and recorded in transactions:
+
+```javascript
+// Transaction structure includes payment method data
+{
+  payment_name: "Zelle - TMT USD",
+  payment_id: "abc123",
+  // ... other transaction fields
+}
+```
+
+## Related Sections
+
+- [Transactions](/guides/financial/transactions) - View transactions using payment methods
+- [Custody Accounts](/guides/financial/custody-accounts) - Manage linked custody accounts
+- [Payouts](/guides/financial/payouts) - Configure disbursement methods

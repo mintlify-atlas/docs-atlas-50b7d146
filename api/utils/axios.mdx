@@ -1,0 +1,123 @@
+---
+title: 'Axios Configuration'
+description: 'HTTP client configuration and interceptors for API requests'
+---
+
+## Overview
+
+The TMT platform uses a configured Axios instance for all HTTP requests. This module provides a pre-configured Axios client with response interceptors for consistent error handling across the application.
+
+## axiosServices
+
+Pre-configured Axios instance for making HTTP requests.
+
+```javascript
+import axiosServices from 'utils/axios';
+```
+
+### Configuration
+
+The Axios instance is created with default settings and includes response interceptors:
+
+- **Success Response**: Returns the response object unchanged
+- **Error Response**: Extracts error data from response or returns a generic error message
+
+### Response Interceptor
+
+The response interceptor handles both successful and failed HTTP responses:
+
+```javascript
+axiosServices.interceptors.response.use(
+  (response) => response,
+  (error) => Promise.reject((error.response && error.response.data) || 'Wrong Services')
+);
+```
+
+#### Error Handling
+
+- If `error.response.data` exists, it is returned as the rejection reason
+- If no error data is available, returns the default message: `'Wrong Services'`
+- All errors are returned as rejected promises
+
+## Usage Examples
+
+### Making GET Requests
+
+```javascript
+import axiosServices from 'utils/axios';
+
+try {
+  const response = await axiosServices.get('/api/events');
+  console.log(response.data);
+} catch (error) {
+  // error contains either error.response.data or 'Wrong Services'
+  console.error('Request failed:', error);
+}
+```
+
+### Making POST Requests
+
+```javascript
+import axiosServices from 'utils/axios';
+
+const createEvent = async (eventData) => {
+  try {
+    const response = await axiosServices.post('/api/events', eventData);
+    return response.data;
+  } catch (error) {
+    throw error; // Error is already processed by interceptor
+  }
+};
+```
+
+### Making PUT Requests
+
+```javascript
+import axiosServices from 'utils/axios';
+
+const updateTicket = async (ticketId, updateData) => {
+  try {
+    const response = await axiosServices.put(`/api/tickets/${ticketId}`, updateData);
+    return response.data;
+  } catch (error) {
+    // Handle the error from interceptor
+    console.error('Update failed:', error);
+  }
+};
+```
+
+### Making DELETE Requests
+
+```javascript
+import axiosServices from 'utils/axios';
+
+const deleteVenue = async (venueId) => {
+  try {
+    await axiosServices.delete(`/api/venues/${venueId}`);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+## Integration with Services
+
+The `axiosServices` instance should be used throughout the application for consistency:
+
+```javascript
+// services/eventService.js
+import axiosServices from 'utils/axios';
+
+export const EventService = {
+  getAll: () => axiosServices.get('/api/events'),
+  getById: (id) => axiosServices.get(`/api/events/${id}`),
+  create: (data) => axiosServices.post('/api/events', data),
+  update: (id, data) => axiosServices.put(`/api/events/${id}`, data),
+  delete: (id) => axiosServices.delete(`/api/events/${id}`)
+};
+```
+
+## Source Location
+
+`src/utils/axios.js:3-11`

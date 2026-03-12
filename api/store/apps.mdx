@@ -1,0 +1,461 @@
+---
+title: 'Application State Slices'
+description: 'Redux slices for managing application-specific state across the TMT platform'
+---
+
+## Introduction
+
+Application state slices manage feature-specific data including users, transactions, events, offices, and more. Each slice follows a consistent pattern with reducers for data management and async thunks for Firebase operations.
+
+## Common Slice Pattern
+
+All app slices share a similar structure:
+
+```javascript
+import { createSlice } from '@reduxjs/toolkit';
+import { Firestore } from '../../guards/firebase/Firebase';
+
+const initialState = {
+  data: [],
+  search: '',
+  error: ''
+};
+
+export const FeatureSlice = createSlice({
+  name: 'Feature',
+  initialState,
+  reducers: {
+    hasError(state, action) {
+      state.error = action.payload;
+    },
+    getData: (state, action) => {
+      state.data = action.payload;
+    },
+    searchData: (state, action) => {
+      state.search = action.payload;
+    }
+  },
+});
+```
+
+## User Management Slices
+
+### Staff Slice
+
+Manages staff user data from the `u_staff` Firebase collection.
+
+**State Structure** (`src/store/apps/Users/StaffSlice.js`)
+
+<ParamField path="staff" type="array" default={[]}>
+  Array of staff user objects
+</ParamField>
+
+<ParamField path="StaffSearch" type="string" default="">
+  Search query for filtering staff
+</ParamField>
+
+<ParamField path="error" type="string" default="">
+  Error message from failed operations
+</ParamField>
+
+**Actions**
+
+```javascript
+import { getStaff, SearchStaff, fetchStaffUsers } from './store/apps/Users/StaffSlice';
+
+// Fetch staff from Firebase
+dispatch(fetchStaffUsers());
+
+// Set search query
+dispatch(SearchStaff('john'));
+```
+
+**Async Thunk: fetchStaffUsers**
+
+```javascript
+export const fetchStaffUsers = () => async (dispatch) => {
+  try {
+    const querySnapshot = await Firestore.collection('u_staff').get();
+    const staffArray = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        ...data,
+        date: {
+          last_access: convertTimestamp(data.date?.last_access),
+          last_update: convertTimestamp(data.date?.last_update),
+        },
+      };
+    });
+    dispatch(getStaff(staffArray));
+  } catch (error) {
+    dispatch(hasError(error));
+  }
+};
+```
+
+### Other User Slices
+
+Similar patterns apply to:
+- **CollaboratorsSlice**: Manages collaborator users
+- **ClientsSlice**: Manages client users
+- **CustomerSlice**: Manages customer data
+
+## Transaction Management
+
+### Transactions Slice
+
+Manages transaction records from the `orders_transactions` collection.
+
+**State Structure** (`src/store/apps/transactions/transactionsSlice.js`)
+
+<ParamField path="Transactions" type="array" default={[]}>
+  Array of transaction objects
+</ParamField>
+
+<ParamField path="TransactionsSearch" type="string" default="">
+  Search query for filtering transactions
+</ParamField>
+
+<ParamField path="error" type="string" default="">
+  Error message from failed operations
+</ParamField>
+
+**Usage Example**
+
+```javascript
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchTransactions, SearchTransactions } from './store/apps/transactions/transactionsSlice';
+
+function TransactionsList() {
+  const dispatch = useDispatch();
+  const { Transactions, TransactionsSearch } = useSelector(
+    (state) => state.Transactions
+  );
+
+  useEffect(() => {
+    dispatch(fetchTransactions());
+  }, []);
+
+  const filteredTransactions = Transactions.filter((tx) =>
+    tx.id.toLowerCase().includes(TransactionsSearch.toLowerCase())
+  );
+
+  return (
+    <div>
+      <input
+        value={TransactionsSearch}
+        onChange={(e) => dispatch(SearchTransactions(e.target.value))}
+        placeholder="Search transactions..."
+      />
+      {filteredTransactions.map((tx) => (
+        <TransactionCard key={tx.id} transaction={tx} />
+      ))}
+    </div>
+  );
+}
+```
+
+## Events Management
+
+### Events Slice
+
+Manages event data with support for filtering by venue and client.
+
+**State Structure** (`src/store/apps/events/EventsSlice.js`)
+
+<ParamField path="Events" type="array" default={[]}>
+  All events
+</ParamField>
+
+<ParamField path="ActiveEvents" type="array" default={[]}>
+  Events with status "Activo"
+</ParamField>
+
+<ParamField path="ClientEvents" type="array" default={[]}>
+  Events filtered by client ID
+</ParamField>
+
+<ParamField path="EventsSearch" type="string" default="">
+  Search query for filtering events
+</ParamField>
+
+<ParamField path="selectedEvent" type="object | null" default={null}>
+  Currently selected event
+</ParamField>
+
+<ParamField path="error" type="string" default="">
+  Error message
+</ParamField>
+
+**Actions**
+
+```javascript
+import {
+  fetchEvents,
+  fetchActiveEvents,
+  fetchClientEvents,
+  setSelectedEvent,
+  SearchEvents
+} from './store/apps/events/EventsSlice';
+
+// Fetch all events
+dispatch(fetchEvents());
+
+// Fetch events by venue
+dispatch(fetchEvents('venue123'));
+
+// Fetch only active events
+dispatch(fetchActiveEvents());
+
+// Fetch events for specific client
+dispatch(fetchClientEvents('client456'));
+
+// Set selected event
+dispatch(setSelectedEvent(eventObject));
+```
+
+**Event Object Structure**
+
+After fetching, each event includes:
+
+```javascript
+{
+  id: 'event123',
+  name: 'Concert Event',
+  venue_id: 'venue123',
+  client_id: 'client456',
+  status: 'Activo',
+  date: {
+    created: '12/03/2026 - 02:30:45 pm',
+    updated: '13/03/2026 - 03:15:22 pm'
+  },
+  date_start: '15/03/2026 - 07:00:00 pm',
+  date_end: '15/03/2026 - 11:00:00 pm',
+  // ... other event properties
+}
+```
+
+## Office Management
+
+### Offices Slice
+
+Manages office locations and related data.
+
+**State Structure** (`src/store/apps/offices/OfficesSlice.js`)
+
+<ParamField path="Offices" type="array" default={[]}>
+  All office locations
+</ParamField>
+
+<ParamField path="SelectedOffice" type="object | null" default={null}>
+  Currently selected office
+</ParamField>
+
+<ParamField path="ActiveOffices" type="array" default={[]}>
+  Offices with active status
+</ParamField>
+
+<ParamField path="OfficesSearch" type="string" default="">
+  Search query
+</ParamField>
+
+<ParamField path="error" type="string" default="">
+  Error message
+</ParamField>
+
+**Usage Example**
+
+```javascript
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  fetchOffices,
+  fetchActiveOffices,
+  setSelectedOffice
+} from './store/apps/offices/OfficesSlice';
+
+function OfficeSelector() {
+  const dispatch = useDispatch();
+  const { ActiveOffices, SelectedOffice } = useSelector(
+    (state) => state.offices
+  );
+
+  useEffect(() => {
+    dispatch(fetchActiveOffices());
+  }, []);
+
+  return (
+    <select
+      value={SelectedOffice?.id || ''}
+      onChange={(e) => {
+        const office = ActiveOffices.find(o => o.id === e.target.value);
+        dispatch(setSelectedOffice(office));
+      }}
+    >
+      <option value="">Select Office</option>
+      {ActiveOffices.map((office) => (
+        <option key={office.id} value={office.id}>
+          {office.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
+## Setup & Configuration
+
+### Setup Slice
+
+Manages global application configuration and exchange rates.
+
+**State Structure** (`src/store/setup/SetupSlice.js`)
+
+<ParamField path="Setup" type="object" default={{}}>
+  Configuration object containing:
+  - `exchange_rates`: Currency exchange rate data with last update timestamp
+  - `payment_data`: Array of payment type configurations
+  - Other configuration documents from the `data` collection
+</ParamField>
+
+**Fetching Setup Data**
+
+```javascript
+import { fetchSetup } from './store/setup/SetupSlice';
+import { useSelector, useDispatch } from 'react-redux';
+
+function ConfigProvider({ children }) {
+  const dispatch = useDispatch();
+  const setup = useSelector((state) => state.setup.Setup);
+
+  useEffect(() => {
+    dispatch(fetchSetup());
+  }, []);
+
+  if (!setup.exchange_rates) {
+    return <Loading />;
+  }
+
+  return children;
+}
+```
+
+**Accessing Configuration**
+
+```javascript
+const setup = useSelector((state) => state.setup.Setup);
+
+// Access exchange rates
+const usdRate = setup.exchange_rates?.USD;
+const lastUpdate = setup.exchange_rates?.date.last_update;
+
+// Access payment types
+const paymentMethods = setup.payment_data || [];
+```
+
+## Timestamp Conversion Utility
+
+All slices use a common pattern for converting Firebase timestamps:
+
+```javascript
+const convertTimestamp = (timestamp) => {
+  if (timestamp && timestamp.seconds) {
+    const date = new Date(
+      timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000
+    );
+    return moment(date).format('DD/MM/YYYY - hh:mm:ss a');
+  }
+  return null;
+};
+```
+
+## Additional Slices
+
+The TMT platform includes many other specialized slices:
+
+### Contract Management
+- **ContractsSlice**: Contract documents
+- **AddendumSlice**: Contract amendments
+- **ContractsLegalSlice**: Legal contract processing
+
+### Financial
+- **OrdersSlice**: Order management
+- **OrdersPayoutSlice**: Payout orders
+- **PayoutsSlice**: Payout processing
+- **PaymentMethodSlice**: Payment configurations
+- **CustodyAccountsSlice**: Account custody management
+
+### Ticketing
+- **TicketsSlice**: Ticket inventory
+- **QueryTicketSlice**: Ticket queries and searches
+
+### Other Features
+- **EventVenuesSlice**: Venue management
+- **CredentialsSlice**: User credentials
+- **NotificationsSlice**: System notifications
+- **PortalsSlice**: Portal configurations
+- **DocumentsSlice**: Document management
+- **MarketingSlice**: Marketing campaigns
+- **OfficeTransactions**: Office-specific transactions
+- **ActiveOfficeCollaboratorsSlice**: Office staff assignments
+- **ActiveOfficeEventSlice**: Office event associations
+
+## Best Practices
+
+### Error Handling
+
+Always handle errors in async operations:
+
+```javascript
+const { error } = useSelector((state) => state.events);
+
+if (error) {
+  return <ErrorMessage message={error} />;
+}
+```
+
+### Loading States
+
+Implement loading indicators while fetching:
+
+```javascript
+function EventsList() {
+  const [loading, setLoading] = useState(true);
+  const events = useSelector((state) => state.events.Events);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchEvents()).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Spinner />;
+  return <EventsGrid events={events} />;
+}
+```
+
+### Memoized Selectors
+
+Create reusable selectors for complex filtering:
+
+```javascript
+import { createSelector } from '@reduxjs/toolkit';
+
+const selectEvents = (state) => state.events.Events;
+const selectSearch = (state) => state.events.EventsSearch;
+
+export const selectFilteredEvents = createSelector(
+  [selectEvents, selectSearch],
+  (events, search) => {
+    if (!search) return events;
+    return events.filter((event) =>
+      event.name.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+);
+```
+
+## Related Resources
+
+- [Store Overview](/api/store/overview)
+- [Authentication State](/api/store/auth)
+- [Authentication Features](/features/authentication)

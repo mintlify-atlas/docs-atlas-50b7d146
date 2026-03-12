@@ -1,0 +1,185 @@
+---
+title: Contract Management
+description: Manage client contracts and addendums in the TMT platform
+---
+
+The Contract Management system allows administrators to create, view, and manage legal contracts with clients, as well as add addendums to existing contracts.
+
+## Overview
+
+Contracts in TMT are stored as PDF documents with associated metadata including client information, contract dates, and unique identifiers. Each contract can have multiple addendums that modify or extend the original agreement.
+
+## Creating a New Contract
+
+<Steps>
+  <Step title="Navigate to Contracts">
+    Access the contracts section from the main navigation menu and click "Crear Contrato" (Create Contract).
+  </Step>
+  
+  <Step title="Select Client">
+    Choose the client from the dropdown list. The system fetches all active clients from the `u_clients` collection.
+    
+    <Note>
+      The client field is required and must be selected before submitting the form.
+    </Note>
+  </Step>
+  
+  <Step title="Enter Contract Details">
+    Fill in the following required fields:
+    
+    - **Contract Title**: A descriptive name for the contract
+    - **Contract ID**: A unique identifier for tracking purposes
+    - **Contract Date**: The date the contract was signed (defaults to today)
+    - **Description**: Detailed information about the contract terms
+  </Step>
+  
+  <Step title="Upload PDF Document">
+    Upload the signed contract document in PDF format.
+    
+    <Warning>
+      Only PDF files are accepted. The file will be stored in Firebase Storage at `contracts/{contract_id}/{filename}`.
+    </Warning>
+    
+    The system supports drag-and-drop or file selection through the file picker.
+  </Step>
+  
+  <Step title="Save Contract">
+    Click "Guardar" (Save) to create the contract. The system will:
+    
+    - Generate a unique contract ID
+    - Upload the PDF to Firebase Storage
+    - Create a contract document in the `contracts` collection
+    - Set the contract status to active
+    - Record the creation timestamp
+  </Step>
+</Steps>
+
+## Contract Data Structure
+
+When a contract is created, the following data is stored in Firestore:
+
+```javascript
+{
+  name: "Contract Title",
+  description: "Contract description",
+  user_name: "Client Name",
+  user_id: "client_firestore_id",
+  contract_id: "UNIQUE-ID",
+  contract_date: Timestamp,
+  status: true,
+  document: "https://storage.googleapis.com/...",
+  date: {
+    created: ServerTimestamp
+  }
+}
+```
+
+## Managing Addendums
+
+Addendums allow you to modify or extend existing contracts without creating entirely new documents.
+
+### Creating an Addendum
+
+<Steps>
+  <Step title="Select Parent Contract">
+    Navigate to the contract details page and click "Create Addendum". The contract ID will be automatically populated.
+  </Step>
+  
+  <Step title="Enter Addendum Information">
+    Provide the following details:
+    
+    - **Addendum Title**: Name describing the modification
+    - **Addendum ID**: Unique identifier for this addendum
+    - **Addendum Date**: Date the addendum was signed
+    - **Description**: Details of the contract modifications
+  </Step>
+  
+  <Step title="Upload Addendum Document">
+    Upload the signed addendum PDF. The file will be stored at:
+    
+    ```
+    contracts/{contract_id}/addendum/{addendum_id}/{filename}
+    ```
+  </Step>
+  
+  <Step title="Save Addendum">
+    The addendum is saved as a subcollection under the parent contract:
+    
+    ```
+    contracts/{contract_id}/addendum/{addendum_id}
+    ```
+  </Step>
+</Steps>
+
+## Viewing Contracts
+
+The contracts table displays all contracts with the following information:
+
+- Contract ID
+- Client name
+- Contract title
+- Contract date
+- Status (active/inactive)
+- Actions (view, edit, create addendum)
+
+### Filtering and Search
+
+Use the table filters to search contracts by:
+- Client name
+- Contract ID
+- Date range
+- Status
+
+## Contract Status Management
+
+Contracts can be activated or deactivated:
+
+- **Active (status: true)**: Contract is currently valid and in effect
+- **Inactive (status: false)**: Contract has expired or been terminated
+
+<Note>
+  Deactivating a contract does not delete it from the system. All contract data and documents remain accessible for historical records.
+</Note>
+
+## Best Practices
+
+<Warning>
+  Always verify contract details before saving. Contract IDs should follow your organization's naming convention for easy tracking.
+</Warning>
+
+1. **Use Descriptive Titles**: Make contract titles clear and specific
+2. **Maintain Consistent IDs**: Use a standardized format for contract identifiers
+3. **Document Addendums**: Clearly describe what each addendum modifies
+4. **Keep PDFs Updated**: Ensure uploaded documents match the metadata
+5. **Regular Audits**: Periodically review active contracts for accuracy
+
+## Security Considerations
+
+- Contract documents are stored in Firebase Storage with access controls
+- Only authenticated administrators can create or modify contracts
+- All contract changes are timestamped for audit trails
+- PDF uploads are validated for file type and size
+
+## Troubleshooting
+
+### Upload Fails
+
+If PDF upload fails:
+- Check file size (should be under 10MB)
+- Verify the file is a valid PDF
+- Ensure stable internet connection
+- Check Firebase Storage permissions
+
+### Client Not Listed
+
+If a client doesn't appear in the dropdown:
+- Verify the client exists in the `u_clients` collection
+- Ensure the client account is active
+- Refresh the page to reload client data
+
+### Cannot Create Addendum
+
+If addendum creation fails:
+- Verify the parent contract exists
+- Check that you have the correct contract ID
+- Ensure the contract is active

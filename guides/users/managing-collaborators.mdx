@@ -1,0 +1,409 @@
+---
+title: Managing Collaborators
+description: Learn how to create, edit, and manage collaborator user accounts in TMT
+---
+
+Collaborators are external users who work with specific clients on the TMT platform. They have limited access based on their assigned client and collaborator type.
+
+## Overview
+
+Collaborator management enables:
+
+<CardGroup cols={2}>
+  <Card title="Create Collaborator Accounts" icon="user-plus">
+    Register new collaborators linked to specific clients
+  </Card>
+  <Card title="Edit Collaborator Details" icon="pen-to-square">
+    Update collaborator information and assignments
+  </Card>
+  <Card title="View Collaborator List" icon="users">
+    Browse and search all collaborators
+  </Card>
+  <Card title="Email Verification" icon="envelope-circle-check">
+    Automated email confirmation workflow
+  </Card>
+</CardGroup>
+
+## Creating a New Collaborator
+
+Collaborators must be assigned to a client or producer organization:
+
+<Steps>
+  <Step title="Navigate to Collaborator Management">
+    Go to **Users** > **Collaborators** in the main navigation, then click **Add Collaborator**.
+  </Step>
+
+  <Step title="Upload Profile Picture (Optional)">
+    Upload a profile photo for the collaborator:
+    - Accepted formats: JPG, GIF, or PNG
+    - Maximum file size: 800KB
+    - Click **Upload** to select a file or **Reset** to remove it
+  </Step>
+
+  <Step title="Set Password">
+    Create secure login credentials:
+    - **Password**: Must be at least 6 characters
+    - **Confirm Password**: Must match the password field
+    - Toggle password visibility using the eye icon
+    
+    <Note>
+      The collaborator will be able to change this password after their first login.
+    </Note>
+  </Step>
+
+  <Step title="Enter Personal Details">
+    Provide the collaborator's personal information:
+    
+    **Required Fields:**
+    - **Name**: Full name of the collaborator
+    - **Email**: Valid email address (used for login and notifications)
+    - **ID Type**: Select identification document type
+    - **ID Number**: Enter identification number (numbers only)
+    - **Phone**: International phone number with country code
+  </Step>
+
+  <Step title="Configure Operational Data">
+    Assign the collaborator to a client and define their role:
+    
+    **Account Type**
+    - Select the collaborator type that defines their permissions
+    - Different types may have access to different features
+    
+    **Client / Producer**
+    - Select the client organization this collaborator works with
+    - Options include:
+      - **TradeMaster Transactions**: Internal TMT collaborators
+      - **Client Companies**: External client organizations
+    
+    <Warning>
+      Collaborators can only access data and transactions related to their assigned client.
+    </Warning>
+  </Step>
+
+  <Step title="Provide Address Information">
+    Complete the address details:
+    - **Country**: Select from available countries
+    - **Postal Code**: Enter postal/zip code
+    - **City**: Enter city name
+    - **Address**: Complete street address
+  </Step>
+
+  <Step title="Save and Send Verification Email">
+    Click **Save** to create the collaborator account. The system will:
+    - Create the user account with **inactive status**
+    - Send an automated email verification message
+    - Display a success notification
+    
+    <Info>
+      The collaborator must confirm their email address before their account becomes active.
+    </Info>
+  </Step>
+</Steps>
+
+## Email Verification Workflow
+
+When a collaborator account is created, an automated email verification process begins:
+
+### Email Confirmation Process
+
+<Steps>
+  <Step title="Email Sent">
+    The collaborator receives a welcome email containing:
+    - Welcome message and platform introduction
+    - Their registered email address
+    - Confirmation button/link
+    - Step-by-step instructions
+  </Step>
+
+  <Step title="Collaborator Confirms">
+    The collaborator must:
+    - Click the confirmation button in the email
+    - Or copy/paste the verification link into their browser
+    
+    <Warning>
+      The verification link expires in **24 hours** for security.
+    </Warning>
+  </Step>
+
+  <Step title="Account Activated">
+    Once email is confirmed:
+    - Account status changes from inactive to active
+    - Collaborator can log in with provided credentials
+    - Access is granted to their assigned client's data
+  </Step>
+</Steps>
+
+### Email Content
+
+The verification email includes:
+
+- **Welcome Message**: Personalized greeting with collaborator name
+- **Account Information**: Registered email address
+- **Getting Started Steps**:
+  1. Confirm email address
+  2. Access platform with credentials
+  3. Personalize profile and password
+- **Confirmation Button**: Direct link to verify email
+- **Alternative Link**: Copyable URL if button doesn't work
+- **Security Notice**: 24-hour expiration warning
+- **TMT Branding**: Professional email template with logo
+
+<Tip>
+  If the collaborator doesn't receive the email, check spam/junk folders or contact support to resend the verification.
+</Tip>
+
+## Editing Collaborator Information
+
+To update an existing collaborator's details:
+
+<Steps>
+  <Step title="Locate the Collaborator">
+    - Navigate to the **Collaborators List**
+    - Use the search bar to filter by name, email, or other criteria
+    - Click the **eye icon** next to the collaborator
+  </Step>
+
+  <Step title="Access Edit Mode">
+    From the collaborator detail page, click **Edit**.
+  </Step>
+
+  <Step title="Update Information">
+    You can modify:
+    - Profile photo
+    - Personal details (name, phone, ID information)
+    - Account type
+    - Client/producer assignment
+    - Address information
+    
+    <Note>
+      **Email addresses cannot be changed** after account creation for security reasons.
+    </Note>
+  </Step>
+
+  <Step title="Save Changes">
+    Click **Save** to apply changes or **Cancel** to discard them.
+  </Step>
+</Steps>
+
+## Viewing Collaborators
+
+The collaborator list provides comprehensive management tools:
+
+### List Features
+
+- **Search & Filter**: Find collaborators by name, email, client, or status
+- **Status Indicators**: Visual indicators for active/inactive accounts
+- **Client Assignment**: See which client each collaborator works with
+- **Sorting**: Sort by name, creation date, status, or email
+- **Pagination**: Navigate through collaborator lists efficiently
+- **Export**: Download collaborator data as CSV
+
+### Collaborator Information Displayed
+
+- Profile picture
+- Full name
+- Assigned client/producer
+- Account type
+- Creation date
+- Active/inactive status
+- Email address
+- Quick actions (view details)
+
+## Collaborator Types and Permissions
+
+Different collaborator types have varying levels of access:
+
+<AccordionGroup>
+  <Accordion title="Understanding Collaborator Types">
+    Collaborator types are configured in the system setup and define:
+    - Which modules the collaborator can access
+    - What actions they can perform
+    - Which data they can view or modify
+    - Transaction approval permissions
+    
+    Common collaborator types may include:
+    - Transaction processors
+    - Document reviewers
+    - Client representatives
+    - Support agents
+  </Accordion>
+
+  <Accordion title="Client-Based Access Control">
+    Collaborators have restricted access based on their assigned client:
+    - Can only view data for their assigned client
+    - Cannot access other clients' information
+    - Transactions are filtered by client assignment
+    - Reports show only relevant client data
+    
+    **Exception**: TMT collaborators assigned to "TradeMaster Transactions" may have broader access depending on their type.
+  </Accordion>
+</AccordionGroup>
+
+## Account Status Management
+
+### Inactive Status
+
+Collaborators start with **inactive status** until email verification:
+
+- Cannot log in to the platform
+- Email verification pending
+- Appears in collaborator list with inactive indicator
+- Can be edited or deleted by administrators
+
+### Active Status
+
+After email confirmation, collaborators become **active**:
+
+- Can log in with credentials
+- Access granted to assigned client data
+- Receives platform notifications
+- Can perform actions based on collaborator type
+
+<Info>
+  Administrators can manually activate or deactivate collaborator accounts as needed.
+</Info>
+
+## Validation Rules
+
+When creating or editing collaborators, these validations apply:
+
+| Field | Validation Rule |
+|-------|----------------|
+| Email | Must be valid email format and unique |
+| Name | Required, cannot be empty |
+| Phone | Valid international phone number |
+| ID Number | Numbers only, required |
+| ID Type | Must select from available types |
+| Password | Minimum 6 characters (creation only) |
+| Country | Must select from available countries |
+| City | Required |
+| Postal Code | Required |
+| Address | Required |
+| Account Type | Must select from collaborator types |
+| Client | Must select a client or producer |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Account Creation">
+    - Verify email addresses carefully before saving
+    - Choose appropriate collaborator types based on responsibilities
+    - Assign collaborators to the correct client organization
+    - Use strong passwords and communicate them securely
+    - Double-check client assignment before saving
+  </Accordion>
+
+  <Accordion title="Email Verification">
+    - Inform collaborators to expect the verification email
+    - Provide clear instructions on the verification process
+    - Remind them to check spam/junk folders
+    - Note the 24-hour expiration period
+    - Have a process for resending verification emails
+  </Accordion>
+
+  <Accordion title="Access Management">
+    - Review collaborator assignments regularly
+    - Update collaborator types when responsibilities change
+    - Deactivate accounts when collaborators leave
+    - Monitor active collaborator accounts
+    - Audit collaborator access periodically
+  </Accordion>
+
+  <Accordion title="Data Security">
+    - Limit collaborator access to necessary clients only
+    - Use appropriate collaborator types to restrict permissions
+    - Regularly review collaborator activity logs
+    - Ensure contact information is current
+    - Maintain documentation of collaborator roles
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Tabs>
+  <Tab title="Email Not Received">
+    **Issue**: Collaborator didn't receive verification email
+    
+    **Solutions**:
+    - Check spam/junk folders
+    - Verify email address was entered correctly
+    - Wait a few minutes for email delivery
+    - Check email server isn't blocking TMT emails
+    - Contact support to resend verification email
+    - Verify collaborator's email inbox isn't full
+  </Tab>
+
+  <Tab title="Cannot Save Collaborator">
+    **Issue**: Save button disabled or error occurs
+    
+    **Solutions**:
+    - Ensure all required fields are completed
+    - Verify email address is not already in use
+    - Check passwords match exactly
+    - Confirm ID number contains only digits
+    - Validate phone number format
+    - Ensure a client/producer is selected
+    - Verify account type is selected
+  </Tab>
+
+  <Tab title="Collaborator Cannot Login">
+    **Issue**: Collaborator created but cannot access platform
+    
+    **Possible Causes**:
+    - Email not yet verified (check status)
+    - Incorrect password
+    - Account deactivated by administrator
+    - Browser cache issues
+    
+    **Solutions**:
+    - Confirm email verification is complete
+    - Reset password if forgotten
+    - Check account status is active
+    - Try different browser or clear cache
+  </Tab>
+
+  <Tab title="Wrong Client Assignment">
+    **Issue**: Collaborator assigned to incorrect client
+    
+    **Solution**: 
+    - Navigate to collaborator detail page
+    - Click Edit
+    - Change the Client/Producer field
+    - Save changes
+    
+    <Warning>
+      This will immediately change what data the collaborator can access.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Security Considerations
+
+<CardGroup cols={2}>
+  <Card title="Email Security" icon="shield-halved">
+    - Verification links expire in 24 hours
+    - Encrypted confirmation tokens
+    - One-time use verification links
+    - Secure email templates
+  </Card>
+  <Card title="Access Control" icon="lock">
+    - Client-based data isolation
+    - Type-based permission filtering
+    - Inactive status until verified
+    - Regular access audits
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Managing Staff" icon="user-tie" href="/guides/users/managing-staff">
+    Learn how to manage staff users
+  </Card>
+  <Card title="Managing Clients" icon="building" href="/guides/users/managing-clients">
+    Learn how to manage client users
+  </Card>
+  <Card title="User Permissions" icon="user-shield" href="/guides/permissions">
+    Understanding permission levels
+  </Card>
+</CardGroup>
